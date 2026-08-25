@@ -50,7 +50,6 @@ class _FamilyFormScreenState extends ConsumerState<FamilyFormScreen> {
   final List<String> _bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
   final List<String> _maritalStatuses = ['Single', 'Married', 'Widowed', 'Divorced'];
   final List<String> _relations = [
-    'Self',
     'Wife',
     'Husband',
     'Son',
@@ -73,8 +72,7 @@ class _FamilyFormScreenState extends ConsumerState<FamilyFormScreen> {
     'Aunt (Kaki/Mami/Foi/Masi)',
     'Nephew (Bhatijo/Bhanjo)',
     'Niece (Bhatiji/Bhanji)',
-    'Cousin',
-    'Other'
+    'Cousin'
   ];
 
   @override
@@ -463,7 +461,7 @@ class _FamilyFormScreenState extends ConsumerState<FamilyFormScreen> {
                         id: memberToEdit?.id,
                         familyId: memberToEdit?.familyId,
                         fullName: nameCtrl.text.trim(),
-                        relation: rel ?? 'Other',
+                        relation: rel ?? _relations.first,
                         dateOfBirth: memberDOB,
                         age: calculatedMemberAge,
                         bloodGroup: blood,
