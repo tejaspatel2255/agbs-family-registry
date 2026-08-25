@@ -4,7 +4,7 @@ import '../../../core/services/supabase_service.dart';
 class AuthRepository {
   SupabaseClient get _client => SupabaseService.client;
 
-  String _mobileToEmail(String mobile) => '${mobile.trim()}@agbs.app';
+  String _mobileToEmail(String mobile) => '${mobile.trim()}@gmail.com';
 
   /// Sign up a new community member (role = 'member')
   Future<AuthResponse> signUpMember({
