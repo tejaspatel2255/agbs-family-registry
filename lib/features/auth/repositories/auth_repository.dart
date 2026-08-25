@@ -6,7 +6,7 @@ class AuthRepository {
 
   String _mobileToEmail(String mobile) => '${mobile.trim()}@gmail.com';
 
-  /// Standard Member Login using Mobile Number (as email) & Password
+  /// Standard Member Login using Mobile Number & Password
   Future<AuthResponse> signInMember({
     required String mobile,
     required String password,
@@ -29,20 +29,20 @@ class AuthRepository {
         },
       );
 
-      if (response.status == 200 && response.data?['success'] == true) {
-        return {'success': true, 'message': 'OTP sent successfully to $mobile'};
+      if (response.status == 200 && response.data != null) {
+        final msg = response.data['message'] ?? 'OTP generated successfully';
+        final devOtp = response.data['dev_otp'];
+        return {
+          'success': true,
+          'message': devOtp != null ? '$msg (Code: $devOtp)' : msg,
+          'dev_otp': devOtp,
+        };
       } else {
         final error = response.data?['error'] ?? 'Failed to send OTP';
         return {'success': false, 'message': error.toString()};
       }
     } catch (e) {
-      // Fallback local RPC if Edge Function fails
-      try {
-        final res = await _client.rpc('send_otp_rpc', params: {'p_mobile': mobile.trim()});
-        return {'success': true, 'message': 'OTP sent to $mobile', 'otp_preview': res};
-      } catch (err) {
-        return {'success': false, 'message': 'Could not send OTP: ${e.toString()}'};
-      }
+      return {'success': false, 'message': 'Failed to send OTP: ${e.toString()}'};
     }
   }
 
@@ -57,8 +57,6 @@ class AuthRepository {
     final email = _mobileToEmail(mobile);
     final userPassword = password ?? 'BrevoOTP#${mobile.trim()}#SecretKey2026';
 
-    // Verify OTP via Edge Function or RPC
-    bool isOtpValid = false;
     try {
       final response = await _client.functions.invoke(
         'verify-otp',
@@ -69,25 +67,16 @@ class AuthRepository {
           'full_name': fullName,
         },
       );
-      if (response.status == 200 && (response.data?['success'] == true || response.data?['valid'] == true)) {
-        isOtpValid = true;
-      } else if (response.data?['error'] != null) {
-        throw AuthException(response.data!['error'].toString());
+
+      if (response.status == 200 && response.data != null && response.data['success'] == true) {
+        // OTP Verified successfully!
+      } else {
+        final errMsg = response.data?['error'] ?? 'Incorrect or expired OTP. Please try again.';
+        throw AuthException(errMsg.toString());
       }
     } catch (e) {
       if (e is AuthException) rethrow;
-      // Fallback RPC check
-      final rpcRes = await _client.rpc('verify_otp_rpc', params: {
-        'p_mobile': mobile.trim(),
-        'p_otp': otp.trim(),
-      });
-      if (rpcRes == true) {
-        isOtpValid = true;
-      }
-    }
-
-    if (!isOtpValid) {
-      throw const AuthException('Invalid or expired OTP. Please try again.');
+      throw AuthException(e.toString().replaceAll('FunctionException: ', ''));
     }
 
     // After OTP verification, register user with email & password
