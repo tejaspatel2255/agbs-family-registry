@@ -50,16 +50,30 @@ class _FamilyFormScreenState extends ConsumerState<FamilyFormScreen> {
   final List<String> _bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
   final List<String> _maritalStatuses = ['Single', 'Married', 'Widowed', 'Divorced'];
   final List<String> _relations = [
-    'Son',
-    'Daughter',
+    'Self',
     'Wife',
     'Husband',
-    'Uncle',
-    'Aunt',
+    'Son',
+    'Daughter',
+    'Father',
+    'Mother',
     'Brother',
     'Sister',
-    'Grandfather',
-    'Grandmother',
+    'Daughter-in-Law (Bahu)',
+    'Son-in-Law (Jamai)',
+    'Father-in-Law (Sasra)',
+    'Mother-in-Law (Sasu)',
+    'Brother-in-Law (Bhai/Saala/Devar)',
+    'Sister-in-Law (Bhabhi/Saali/Nanand)',
+    'Grandfather (Dada/Nana)',
+    'Grandmother (Dadi/Nani)',
+    'Grandson (Pautra/Dautra)',
+    'Granddaughter (Pautri/Dautri)',
+    'Uncle (Kaka/Mama/Fuwa/Masa)',
+    'Aunt (Kaki/Mami/Foi/Masi)',
+    'Nephew (Bhatijo/Bhanjo)',
+    'Niece (Bhatiji/Bhanji)',
+    'Cousin',
     'Other'
   ];
 
