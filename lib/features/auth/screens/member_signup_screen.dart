@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,26 +17,66 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
   final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
   final _mobileController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
+  final _otpController = TextEditingController();
+
+  bool _otpSent = false;
+  int _cooldownSeconds = 0;
+  Timer? _cooldownTimer;
 
   @override
   void dispose() {
     _fullNameController.dispose();
     _mobileController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
+    _otpController.dispose();
+    _cooldownTimer?.cancel();
     super.dispose();
   }
 
-  Future<void> _handleSignUp() async {
+  void _startCooldownTimer() {
+    setState(() => _cooldownSeconds = 30);
+    _cooldownTimer?.cancel();
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_cooldownSeconds > 0) {
+        setState(() => _cooldownSeconds--);
+      } else {
+        _cooldownTimer?.cancel();
+      }
+    });
+  }
+
+  Future<void> _handleSendOtp() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final success = await ref.read(authStateProvider.notifier).signUpMember(
+    final mobile = _mobileController.text.trim();
+    final res = await ref.read(authStateProvider.notifier).sendOtp(mobile);
+
+    if (res['success'] == true && mounted) {
+      setState(() => _otpSent = true);
+      _startCooldownTimer();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? 'OTP sent to $mobile'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleVerifyOtp() async {
+    if (_otpController.text.trim().length != 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid 6-digit OTP'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final success = await ref.read(authStateProvider.notifier).verifyOtpAndLogin(
           mobile: _mobileController.text.trim(),
-          password: _passwordController.text.trim(),
+          otp: _otpController.text.trim(),
           fullName: _fullNameController.text.trim(),
         );
 
@@ -50,10 +91,16 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Member Registration'),
+        title: Text(_otpSent ? 'Verify OTP' : 'Member Registration'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (_otpSent) {
+              setState(() => _otpSent = false);
+            } else {
+              context.pop();
+            }
+          },
         ),
       ),
       body: SafeArea(
@@ -72,8 +119,8 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
                       color: AppColors.primaryContainer,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.person_add_rounded,
+                    child: Icon(
+                      _otpSent ? Icons.mark_email_read_rounded : Icons.person_add_rounded,
                       size: 42,
                       color: AppColors.primary,
                     ),
@@ -82,7 +129,7 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
                 const SizedBox(height: 16),
 
                 Text(
-                  'Create AGBS Account',
+                  _otpSent ? 'Enter 6-Digit OTP' : 'Create AGBS Account',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.poppins(
                     fontSize: 24,
@@ -94,7 +141,9 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
                 const SizedBox(height: 4),
 
                 Text(
-                  'Join the Audichya Gadhiya Brahm Samaj Registry',
+                  _otpSent
+                      ? 'OTP sent via Brevo SMS to +91 ${_mobileController.text}'
+                      : 'Join the Audichya Gadhiya Brahm Samaj Registry',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                     fontSize: 14,
@@ -120,117 +169,120 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
                     ),
                   ),
 
-                // Full Name
-                TextFormField(
-                  controller: _fullNameController,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                    hintText: 'Enter your full name',
-                    prefixIcon: Icon(Icons.person_outline_rounded),
+                if (!_otpSent) ...[
+                  // Step 1: Full Name & Mobile Number
+                  TextFormField(
+                    controller: _fullNameController,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      labelText: 'Full Name *',
+                      hintText: 'Enter your full name',
+                      prefixIcon: Icon(Icons.person_outline_rounded),
+                    ),
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return 'Full name is required';
+                      }
+                      return null;
+                    },
                   ),
-                  validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return 'Full name is required';
-                    }
-                    return null;
-                  },
-                ),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // Mobile Number
-                TextFormField(
-                  controller: _mobileController,
-                  keyboardType: TextInputType.phone,
-                  maxLength: 10,
-                  decoration: const InputDecoration(
-                    labelText: 'Mobile Number',
-                    hintText: '10-digit mobile number',
-                    prefixIcon: Icon(Icons.phone_android_rounded),
-                    counterText: '',
+                  TextFormField(
+                    controller: _mobileController,
+                    keyboardType: TextInputType.phone,
+                    maxLength: 10,
+                    decoration: const InputDecoration(
+                      labelText: 'Mobile Number *',
+                      hintText: '10-digit mobile number',
+                      prefixIcon: Icon(Icons.phone_android_rounded),
+                      counterText: '',
+                    ),
+                    validator: (val) {
+                      if (val == null || val.trim().length != 10) {
+                        return 'Please enter a valid 10-digit mobile number';
+                      }
+                      return null;
+                    },
                   ),
-                  validator: (val) {
-                    if (val == null || val.trim().length != 10) {
-                      return 'Please enter a valid 10-digit mobile number';
-                    }
-                    return null;
-                  },
-                ),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 28),
 
-                // Password
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    hintText: 'At least 6 characters',
-                    prefixIcon: const Icon(Icons.lock_outline_rounded),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryDark,
+                    ),
+                    onPressed: authState.isLoading ? null : _handleSendOtp,
+                    child: authState.isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
+                          )
+                        : const Text('Send OTP'),
+                  ),
+                ] else ...[
+                  // Step 2: OTP Verification
+                  TextFormField(
+                    controller: _otpController,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      fontSize: 22,
+                      letterSpacing: 8,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: '6-Digit Verification Code',
+                      hintText: '______',
+                      prefixIcon: Icon(Icons.security_rounded),
+                      counterText: '',
                     ),
                   ),
-                  validator: (val) {
-                    if (val == null || val.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
-                ),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 24),
 
-                // Confirm Password
-                TextFormField(
-                  controller: _confirmPasswordController,
-                  obscureText: _obscureConfirmPassword,
-                  decoration: InputDecoration(
-                    labelText: 'Confirm Password',
-                    hintText: 'Re-enter your password',
-                    prefixIcon: const Icon(Icons.lock_reset_rounded),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscureConfirmPassword = !_obscureConfirmPassword;
-                        });
-                      },
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
                     ),
+                    onPressed: authState.isLoading ? null : _handleVerifyOtp,
+                    child: authState.isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
+                          )
+                        : const Text('Verify & Register'),
                   ),
-                  validator: (val) {
-                    if (val != _passwordController.text) {
-                      return 'Passwords do not match';
-                    }
-                    return null;
-                  },
-                ),
 
-                const SizedBox(height: 28),
+                  const SizedBox(height: 20),
 
-                ElevatedButton(
-                  onPressed: authState.isLoading ? null : _handleSignUp,
-                  child: authState.isLoading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.5,
+                  // Resend Cooldown
+                  Center(
+                    child: _cooldownSeconds > 0
+                        ? Text(
+                            'Resend OTP in ${_cooldownSeconds}s',
+                            style: GoogleFonts.inter(
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          )
+                        : TextButton.icon(
+                            onPressed: authState.isLoading ? null : _handleSendOtp,
+                            icon: const Icon(Icons.refresh_rounded, size: 18),
+                            label: const Text('Resend OTP'),
                           ),
-                        )
-                      : const Text('Create Account'),
-                ),
+                  ),
+                ],
 
                 const SizedBox(height: 20),
 

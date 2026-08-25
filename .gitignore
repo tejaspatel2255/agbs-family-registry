@@ -15,9 +15,13 @@ migrate_working_dir/
 # Environment & Credentials
 .env
 *.env
+*.env.*
 *.pem
 *.key
 lib/core/constants/supabase_constants.dart
+supabase/.temp/
+supabase/.env*
+*.secret*
 
 # IntelliJ / Android Studio related
 *.iml

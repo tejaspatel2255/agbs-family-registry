@@ -39,30 +39,53 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   AuthNotifier(this._repository) : super(AuthState());
 
-  Future<bool> loginMember(String mobile, String password) async {
+  Future<Map<String, dynamic>> sendOtp(String mobile) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      final response = await _repository.signIn(mobile: mobile, password: password);
+      final res = await _repository.sendOtp(mobile);
+      state = state.copyWith(isLoading: false);
+      return res;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: e.toString().replaceAll('Exception: ', ''),
+      );
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<bool> verifyOtpAndLogin({
+    required String mobile,
+    required String otp,
+    String? fullName,
+  }) async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
+    try {
+      final response = await _repository.verifyOtpAndLogin(
+        mobile: mobile,
+        otp: otp,
+        fullName: fullName,
+      );
       if (response.user != null) {
         final profile = await _repository.getUserProfile(response.user!.id);
         state = state.copyWith(isLoading: false, profile: profile);
         return true;
       }
-      state = state.copyWith(isLoading: false, errorMessage: 'Login failed');
+      state = state.copyWith(isLoading: false, errorMessage: 'OTP verification failed');
       return false;
     } catch (e) {
       state = state.copyWith(
-        isLoading: false, 
+        isLoading: false,
         errorMessage: e.toString().replaceAll('Exception: ', ''),
       );
       return false;
     }
   }
 
-  Future<bool> loginAdmin(String mobile, String password) async {
+  Future<bool> loginAdmin(String email, String password) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      final response = await _repository.signIn(mobile: mobile, password: password);
+      final response = await _repository.signInAdmin(email: email, password: password);
       if (response.user != null) {
         final profile = await _repository.getUserProfile(response.user!.id);
         final role = profile?['role'] ?? 'member';
@@ -80,34 +103,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return true;
       }
       state = state.copyWith(isLoading: false, errorMessage: 'Admin login failed');
-      return false;
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false, 
-        errorMessage: e.toString().replaceAll('Exception: ', ''),
-      );
-      return false;
-    }
-  }
-
-  Future<bool> signUpMember({
-    required String mobile,
-    required String password,
-    required String fullName,
-  }) async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
-    try {
-      final response = await _repository.signUpMember(
-        mobile: mobile,
-        password: password,
-        fullName: fullName,
-      );
-      if (response.user != null) {
-        final profile = await _repository.getUserProfile(response.user!.id);
-        state = state.copyWith(isLoading: false, profile: profile);
-        return true;
-      }
-      state = state.copyWith(isLoading: false, errorMessage: 'Sign up failed');
       return false;
     } catch (e) {
       state = state.copyWith(
