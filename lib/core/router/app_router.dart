@@ -41,7 +41,17 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/register-family',
-      builder: (context, state) => const MemberDashboardScreen(), // Will be Phase 4
+      builder: (context, state) => const MemberDashboardScreen(),
+    ),
+    GoRoute(
+      path: '/family-form',
+      builder: (context, state) {
+        final id = state.uri.queryParameters['id'];
+        return Scaffold(
+          appBar: AppBar(title: Text(id != null ? 'Edit Family Record' : 'New Family Entry')),
+          body: Center(child: Text('Family Record Form (Prompt 5) - ID: ${id ?? "New"}')),
+        );
+      },
     ),
   ],
 );

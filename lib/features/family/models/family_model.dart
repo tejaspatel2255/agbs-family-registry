@@ -1,0 +1,75 @@
+class FamilyModel {
+  final String id;
+  final String familyCode;
+  final String fullName;
+  final String fatherHusbandName;
+  final String motherName;
+  final DateTime dateOfBirth;
+  final String gender;
+  final String bloodGroup;
+  final String maritalStatus;
+  final String address;
+  final String? photoUrl;
+  final int memberCount;
+  final String? createdBy;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  FamilyModel({
+    required this.id,
+    required this.familyCode,
+    required this.fullName,
+    required this.fatherHusbandName,
+    required this.motherName,
+    required this.dateOfBirth,
+    required this.gender,
+    required this.bloodGroup,
+    required this.maritalStatus,
+    required this.address,
+    this.photoUrl,
+    required this.memberCount,
+    this.createdBy,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory FamilyModel.fromJson(Map<String, dynamic> json) {
+    return FamilyModel(
+      id: json['id'] as String,
+      familyCode: json['family_code'] as String? ?? '',
+      fullName: json['full_name'] as String? ?? '',
+      fatherHusbandName: json['father_husband_name'] as String? ?? '',
+      motherName: json['mother_name'] as String? ?? '',
+      dateOfBirth: DateTime.tryParse(json['date_of_birth']?.toString() ?? '') ?? DateTime.now(),
+      gender: json['gender'] as String? ?? '',
+      bloodGroup: json['blood_group'] as String? ?? '',
+      maritalStatus: json['marital_status'] as String? ?? '',
+      address: json['address'] as String? ?? '',
+      photoUrl: json['photo_url'] as String?,
+      memberCount: json['member_count'] as int? ?? 1,
+      createdBy: json['created_by'] as String?,
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updated_at']?.toString() ?? '') ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'family_code': familyCode,
+      'full_name': fullName,
+      'father_husband_name': fatherHusbandName,
+      'mother_name': motherName,
+      'date_of_birth': dateOfBirth.toIso8601String().split('T').first,
+      'gender': gender,
+      'blood_group': bloodGroup,
+      'marital_status': maritalStatus,
+      'address': address,
+      'photo_url': photoUrl,
+      'member_count': memberCount,
+      'created_by': createdBy,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+    };
+  }
+}
