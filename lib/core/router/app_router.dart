@@ -7,6 +7,7 @@ import '../../features/auth/screens/member_login_screen.dart';
 import '../../features/auth/screens/member_signup_screen.dart';
 import '../../features/dashboard/admin_dashboard_screen.dart';
 import '../../features/dashboard/member_dashboard_screen.dart';
+import '../../features/family/screens/family_form_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -47,10 +48,7 @@ final GoRouter appRouter = GoRouter(
       path: '/family-form',
       builder: (context, state) {
         final id = state.uri.queryParameters['id'];
-        return Scaffold(
-          appBar: AppBar(title: Text(id != null ? 'Edit Family Record' : 'New Family Entry')),
-          body: Center(child: Text('Family Record Form (Prompt 5) - ID: ${id ?? "New"}')),
-        );
+        return FamilyFormScreen(familyId: id);
       },
     ),
   ],

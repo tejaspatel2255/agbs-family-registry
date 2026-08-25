@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/supabase_service.dart';
 import '../models/family_model.dart';
+import '../../members/models/family_member_model.dart';
 
 class FamilyRepository {
   SupabaseClient get _client => SupabaseService.client;
@@ -18,6 +19,75 @@ class FamilyRepository {
       return (data as List).map((e) => FamilyModel.fromJson(e)).toList();
     } catch (e) {
       return [];
+    }
+  }
+
+  /// Fetch a single family record by ID with its members
+  Future<Map<String, dynamic>?> fetchFamilyWithMembers(String familyId) async {
+    try {
+      final familyData = await _client.from('families').select().eq('id', familyId).single();
+      final membersData = await _client.from('family_members').select().eq('family_id', familyId);
+
+      final family = FamilyModel.fromJson(familyData);
+      final members = (membersData as List).map((e) => FamilyMemberModel.fromJson(e)).toList();
+
+      return {
+        'family': family,
+        'members': members,
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Create a new family record and its associated members
+  Future<bool> createFamily({
+    required Map<String, dynamic> familyData,
+    required List<FamilyMemberModel> members,
+    required String? userId,
+  }) async {
+    try {
+      final payload = Map<String, dynamic>.from(familyData);
+      payload['created_by'] = userId;
+
+      // Insert family row
+      final insertedFamily = await _client.from('families').insert(payload).select().single();
+      final familyId = insertedFamily['id'] as String;
+
+      // Insert family members if any
+      if (members.isNotEmpty) {
+        final membersPayload = members.map((m) => m.toJson(assignedFamilyId: familyId)).toList();
+        await _client.from('family_members').insert(membersPayload);
+      }
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Update an existing family record and sync its members
+  Future<bool> updateFamily({
+    required String familyId,
+    required Map<String, dynamic> familyData,
+    required List<FamilyMemberModel> members,
+  }) async {
+    try {
+      // Update families table
+      await _client.from('families').update(familyData).eq('id', familyId);
+
+      // Delete old family members for this family
+      await _client.from('family_members').delete().eq('family_id', familyId);
+
+      // Insert new/updated family members
+      if (members.isNotEmpty) {
+        final membersPayload = members.map((m) => m.toJson(assignedFamilyId: familyId)).toList();
+        await _client.from('family_members').insert(membersPayload);
+      }
+
+      return true;
+    } catch (e) {
+      return false;
     }
   }
 
