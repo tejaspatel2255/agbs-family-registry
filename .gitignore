@@ -17,6 +17,7 @@ migrate_working_dir/
 *.env
 *.pem
 *.key
+lib/core/constants/supabase_constants.dart
 
 # IntelliJ / Android Studio related
 *.iml

@@ -22,20 +22,14 @@ A modern Flutter mobile application integrated with Supabase backend for managin
 
 ---
 
-## 📁 Feature Structure
-```
-lib/
-├── core/
-│   ├── constants/       # App constants & Supabase configuration
-│   ├── services/        # Supabase client services
-│   └── theme/           # Color palettes & Material3 theme data
-└── features/
-    ├── auth/            # Sign In, Sign Up & OTP Authentication
-    ├── family/          # Family Head & General Details Registration
-    ├── members/         # Adding / Managing Family Members
-    ├── directory/       # Community Search & Directory
-    └── profile/         # User Profile & Admin Settings
-```
+## 🔒 Security & Environment Setup
+To protect sensitive API keys, `lib/core/constants/supabase_constants.dart` is excluded from version control (`.gitignore`).
+
+1. Copy the template file:
+   ```bash
+   cp lib/core/constants/supabase_constants.template.dart lib/core/constants/supabase_constants.dart
+   ```
+2. Open `lib/core/constants/supabase_constants.dart` and insert your actual Supabase URL and Anon Key.
 
 ---
 
@@ -45,7 +39,7 @@ lib/
 - [Flutter SDK](https://docs.flutter.dev/get-started/install) (v3.11.0 or higher)
 - [Supabase Account](https://supabase.com)
 
-### 2. Setup Project
+### 2. Run the App
 ```bash
 # Clone the repository
 git clone https://github.com/tejaspatel2255/agbs-family-registry.git
@@ -62,5 +56,5 @@ flutter run
 
 ---
 
-## 🔒 License
+## 📜 License
 This project is private and developed for Audichya Gadhiya Brahm Samaj (AGBS), Junagadh.
