@@ -211,7 +211,9 @@ class _FamilyFormScreenState extends ConsumerState<FamilyFormScreen> {
 
   void _showAddEditMemberBottomSheet({FamilyMemberModel? memberToEdit, int? editIndex}) {
     final nameCtrl = TextEditingController(text: memberToEdit?.fullName ?? '');
-    final ageCtrl = TextEditingController(text: memberToEdit?.age.toString() ?? '');
+    DateTime? memberDOB = memberToEdit?.dateOfBirth;
+    int calculatedMemberAge = memberToEdit?.age ?? 0;
+    final ageCtrl = TextEditingController(text: memberToEdit != null ? memberToEdit.age.toString() : '');
     String? rel = memberToEdit?.relation ?? _relations.first;
     String? blood = memberToEdit?.bloodGroup;
     File? memberPhotoFile;
@@ -328,45 +330,121 @@ class _FamilyFormScreenState extends ConsumerState<FamilyFormScreen> {
 
                   const SizedBox(height: 12),
 
+                  // Date of Birth & Auto-Calculated Age
                   Row(
                     children: [
-                      // Age Number Field
+                      // Date of Birth Picker
                       Expanded(
-                        child: TextField(
-                          controller: ageCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Age *',
-                            prefixIcon: Icon(Icons.cake_outlined),
+                        flex: 3,
+                        child: InkWell(
+                          onTap: () async {
+                            final now = DateTime.now();
+                            final picked = await showDatePicker(
+                              context: ctx,
+                              initialDate: memberDOB ?? DateTime(2000, 1, 1),
+                              firstDate: DateTime(1900),
+                              lastDate: now,
+                              builder: (context, child) {
+                                return Theme(
+                                  data: Theme.of(context).copyWith(
+                                    colorScheme: const ColorScheme.light(
+                                      primary: AppColors.primary,
+                                      onPrimary: Colors.white,
+                                      onSurface: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  child: child!,
+                                );
+                              },
+                            );
+
+                            if (picked != null) {
+                              setModalState(() {
+                                memberDOB = picked;
+                                int a = now.year - picked.year;
+                                if (now.month < picked.month ||
+                                    (now.month == picked.month && now.day < picked.day)) {
+                                  a--;
+                                }
+                                calculatedMemberAge = a < 0 ? 0 : a;
+                                ageCtrl.text = calculatedMemberAge.toString();
+                              });
+                            }
+                          },
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Date of Birth *',
+                              prefixIcon: Icon(Icons.calendar_today_outlined),
+                            ),
+                            child: Text(
+                              memberDOB != null
+                                  ? DateFormat('dd MMM yyyy').format(memberDOB!)
+                                  : 'Select DOB',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: memberDOB != null
+                                    ? AppColors.textPrimary
+                                    : AppColors.textMuted,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      // Blood Group Dropdown
+                      const SizedBox(width: 10),
+                      // Read-only Auto-calculated Age
                       Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: blood,
+                        flex: 2,
+                        child: InputDecorator(
                           decoration: const InputDecoration(
-                            labelText: 'Blood Group',
-                            prefixIcon: Icon(Icons.water_drop_outlined),
+                            labelText: 'Age',
+                            prefixIcon: Icon(Icons.cake_outlined),
                           ),
-                          items: _bloodGroups
-                              .map((b) => DropdownMenuItem(value: b, child: Text(b)))
-                              .toList(),
-                          onChanged: (v) => setModalState(() => blood = v),
+                          child: Text(
+                            '$calculatedMemberAge yrs',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryDark,
+                            ),
+                          ),
                         ),
                       ),
                     ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Blood Group Dropdown
+                  DropdownButtonFormField<String>(
+                    value: blood,
+                    decoration: const InputDecoration(
+                      labelText: 'Blood Group',
+                      prefixIcon: Icon(Icons.water_drop_outlined),
+                    ),
+                    items: _bloodGroups
+                        .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                        .toList(),
+                    onChanged: (v) => setModalState(() => blood = v),
                   ),
 
                   const SizedBox(height: 20),
 
                   ElevatedButton(
                     onPressed: () async {
-                      if (nameCtrl.text.trim().isEmpty || ageCtrl.text.trim().isEmpty) {
+                      if (nameCtrl.text.trim().isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Please enter member name and age'),
+                            content: Text('Please enter member name'),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (memberDOB == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please select Date of Birth'),
                             backgroundColor: AppColors.error,
                           ),
                         );
@@ -386,7 +464,8 @@ class _FamilyFormScreenState extends ConsumerState<FamilyFormScreen> {
                         familyId: memberToEdit?.familyId,
                         fullName: nameCtrl.text.trim(),
                         relation: rel ?? 'Other',
-                        age: int.tryParse(ageCtrl.text.trim()) ?? 0,
+                        dateOfBirth: memberDOB,
+                        age: calculatedMemberAge,
                         bloodGroup: blood,
                         photoUrl: uploadedUrl,
                       );
