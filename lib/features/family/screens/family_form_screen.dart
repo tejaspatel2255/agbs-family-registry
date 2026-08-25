@@ -142,6 +142,18 @@ class _FamilyFormScreenState extends ConsumerState<FamilyFormScreen> {
     }
   }
 
+  bool get _isUnderMarriageAge {
+    if (_selectedDOB == null) return false;
+    final minAge = (_selectedGender == 'Female') ? 18 : 21;
+    return _calculatedAge < minAge;
+  }
+
+  void _checkAndEnforceMarriageAgeConstraint() {
+    if (_isUnderMarriageAge) {
+      _selectedMaritalStatus = 'Single';
+    }
+  }
+
   Future<void> _selectDOB(BuildContext context) async {
     final now = DateTime.now();
     final picked = await showDatePicker(
@@ -167,6 +179,7 @@ class _FamilyFormScreenState extends ConsumerState<FamilyFormScreen> {
       setState(() {
         _selectedDOB = picked;
         _calculatedAge = _calculateAgeFromDOB(picked);
+        _checkAndEnforceMarriageAgeConstraint();
       });
     }
   }
@@ -734,7 +747,10 @@ class _FamilyFormScreenState extends ConsumerState<FamilyFormScreen> {
                   items: _genders
                       .map((g) => DropdownMenuItem(value: g, child: Text(g)))
                       .toList(),
-                  onChanged: (v) => setState(() => _selectedGender = v),
+                  onChanged: (v) => setState(() {
+                    _selectedGender = v;
+                    _checkAndEnforceMarriageAgeConstraint();
+                  }),
                   validator: (v) => v == null ? 'Select gender' : null,
                 ),
               ),
@@ -758,19 +774,34 @@ class _FamilyFormScreenState extends ConsumerState<FamilyFormScreen> {
 
           const SizedBox(height: 16),
 
-          // 8. Marital Status
-          DropdownButtonFormField<String>(
-            value: _selectedMaritalStatus,
-            decoration: const InputDecoration(
-              labelText: 'Marital Status *',
-              prefixIcon: Icon(Icons.favorite_outline_rounded),
-            ),
-            items: _maritalStatuses
-                .map((m) => DropdownMenuItem(value: m, child: Text(m)))
-                .toList(),
-            onChanged: (v) => setState(() => _selectedMaritalStatus = v),
-            validator: (v) => v == null ? 'Select marital status' : null,
-          ),
+          // 8. Marital Status (Locked to Single if under legal marriage age)
+          _isUnderMarriageAge
+              ? InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Marital Status *',
+                    prefixIcon: Icon(Icons.favorite_outline_rounded),
+                    helperText: 'Locked to Single (Under legal marriage age)',
+                  ),
+                  child: Text(
+                    'Single',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                )
+              : DropdownButtonFormField<String>(
+                  value: _selectedMaritalStatus,
+                  decoration: const InputDecoration(
+                    labelText: 'Marital Status *',
+                    prefixIcon: Icon(Icons.favorite_outline_rounded),
+                  ),
+                  items: _maritalStatuses
+                      .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                      .toList(),
+                  onChanged: (v) => setState(() => _selectedMaritalStatus = v),
+                  validator: (v) => v == null ? 'Select marital status' : null,
+                ),
 
           const SizedBox(height: 16),
 
