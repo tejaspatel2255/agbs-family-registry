@@ -17,8 +17,10 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
   final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
   final _mobileController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _otpController = TextEditingController();
 
+  bool _obscurePassword = true;
   bool _otpSent = false;
   int _cooldownSeconds = 0;
   Timer? _cooldownTimer;
@@ -27,13 +29,14 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
   void dispose() {
     _fullNameController.dispose();
     _mobileController.dispose();
+    _passwordController.dispose();
     _otpController.dispose();
     _cooldownTimer?.cancel();
     super.dispose();
   }
 
   void _startCooldownTimer() {
-    setState(() => _cooldownSeconds = 30);
+    setState(() => _cooldownSeconds = 60);
     _cooldownTimer?.cancel();
     _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_cooldownSeconds > 0) {
@@ -48,7 +51,7 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final mobile = _mobileController.text.trim();
-    final res = await ref.read(authStateProvider.notifier).sendOtp(mobile);
+    final res = await ref.read(authStateProvider.notifier).sendOtp(mobile, purpose: 'signup');
 
     if (res['success'] == true && mounted) {
       setState(() => _otpSent = true);
@@ -56,18 +59,18 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(res['message'] ?? 'OTP sent to $mobile'),
+          content: Text(res['message'] ?? 'OTP sent to $mobile via Brevo SMS'),
           backgroundColor: AppColors.success,
         ),
       );
     }
   }
 
-  Future<void> _handleVerifyOtp() async {
+  Future<void> _handleVerifyOtpAndSignUp() async {
     if (_otpController.text.trim().length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter a valid 6-digit OTP'),
+          content: Text('Please enter the 6-digit OTP received on your mobile'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -77,6 +80,7 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
     final success = await ref.read(authStateProvider.notifier).verifyOtpAndLogin(
           mobile: _mobileController.text.trim(),
           otp: _otpController.text.trim(),
+          purpose: 'signup',
           fullName: _fullNameController.text.trim(),
         );
 
@@ -91,7 +95,7 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_otpSent ? 'Verify OTP' : 'Member Registration'),
+        title: Text(_otpSent ? 'Verify OTP' : 'Member Registration (OTP)'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () {
@@ -170,7 +174,7 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
                   ),
 
                 if (!_otpSent) ...[
-                  // Step 1: Full Name & Mobile Number
+                  // Step 1: Registration Form
                   TextFormField(
                     controller: _fullNameController,
                     textCapitalization: TextCapitalization.words,
@@ -207,11 +211,39 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
                     },
                   ),
 
+                  const SizedBox(height: 16),
+
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      labelText: 'Password *',
+                      hintText: 'At least 6 characters',
+                      prefixIcon: const Icon(Icons.lock_outline_rounded),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                    ),
+                    validator: (val) {
+                      if (val == null || val.length < 6) {
+                        return 'Password must be at least 6 characters';
+                      }
+                      return null;
+                    },
+                  ),
+
                   const SizedBox(height: 28),
 
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryDark,
+                      backgroundColor: AppColors.primary,
                     ),
                     onPressed: authState.isLoading ? null : _handleSendOtp,
                     child: authState.isLoading
@@ -223,10 +255,10 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
                               strokeWidth: 2.5,
                             ),
                           )
-                        : const Text('Send OTP'),
+                        : const Text('Send SMS OTP for Registration'),
                   ),
                 ] else ...[
-                  // Step 2: OTP Verification
+                  // Step 2: OTP Verification Screen
                   TextFormField(
                     controller: _otpController,
                     keyboardType: TextInputType.number,
@@ -251,7 +283,7 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                     ),
-                    onPressed: authState.isLoading ? null : _handleVerifyOtp,
+                    onPressed: authState.isLoading ? null : _handleVerifyOtpAndSignUp,
                     child: authState.isLoading
                         ? const SizedBox(
                             width: 24,
@@ -261,12 +293,12 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
                               strokeWidth: 2.5,
                             ),
                           )
-                        : const Text('Verify & Register'),
+                        : const Text('Verify OTP & Complete Registration'),
                   ),
 
                   const SizedBox(height: 20),
 
-                  // Resend Cooldown
+                  // Resend Timer
                   Center(
                     child: _cooldownSeconds > 0
                         ? Text(
@@ -298,7 +330,7 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
                         context.pushReplacement('/member-login');
                       },
                       child: Text(
-                        'Login Here',
+                        'Member Login',
                         style: GoogleFonts.inter(
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,
