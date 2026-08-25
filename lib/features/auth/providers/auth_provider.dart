@@ -39,24 +39,49 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   AuthNotifier(this._repository) : super(AuthState());
 
-  Future<Map<String, dynamic>> sendOtp(String mobile) async {
+  /// Standard Member Login
+  Future<bool> loginMember(String mobile, String password) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      final res = await _repository.sendOtp(mobile);
-      state = state.copyWith(isLoading: false);
-      return res;
+      final response = await _repository.signInMember(mobile: mobile, password: password);
+      if (response.user != null) {
+        final profile = await _repository.getUserProfile(response.user!.id);
+        state = state.copyWith(isLoading: false, profile: profile);
+        return true;
+      }
+      state = state.copyWith(isLoading: false, errorMessage: 'Member login failed.');
+      return false;
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: e.toString().replaceAll('Exception: ', ''),
+        errorMessage: e.toString().replaceAll('Exception: ', '').replaceAll('AuthException: ', ''),
       );
-      return {'success': false, 'message': e.toString()};
+      return false;
     }
   }
 
+  /// Send OTP
+  Future<Map<String, dynamic>> sendOtp(String mobile, {String purpose = 'signup'}) async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
+    try {
+      final res = await _repository.sendOtp(mobile, purpose: purpose);
+      state = state.copyWith(isLoading: false);
+      if (res['success'] != true && res['message'] != null) {
+        state = state.copyWith(errorMessage: res['message'].toString());
+      }
+      return res;
+    } catch (e) {
+      final msg = e.toString().replaceAll('Exception: ', '');
+      state = state.copyWith(isLoading: false, errorMessage: msg);
+      return {'success': false, 'message': msg};
+    }
+  }
+
+  /// Verify OTP & Register
   Future<bool> verifyOtpAndLogin({
     required String mobile,
     required String otp,
+    String purpose = 'signup',
     String? fullName,
   }) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
@@ -64,6 +89,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final response = await _repository.verifyOtpAndLogin(
         mobile: mobile,
         otp: otp,
+        purpose: purpose,
         fullName: fullName,
       );
       if (response.user != null) {
@@ -76,12 +102,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: e.toString().replaceAll('Exception: ', ''),
+        errorMessage: e.toString().replaceAll('Exception: ', '').replaceAll('AuthException: ', ''),
       );
       return false;
     }
   }
 
+  /// Admin Login
   Future<bool> loginAdmin(String email, String password) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
@@ -89,11 +116,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (response.user != null) {
         final profile = await _repository.getUserProfile(response.user!.id);
         final role = profile?['role'] ?? 'member';
-        
+
         if (role != 'admin') {
           await _repository.signOut();
           state = state.copyWith(
-            isLoading: false, 
+            isLoading: false,
             errorMessage: 'Access Denied: Admin privileges required.',
           );
           return false;
@@ -106,7 +133,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return false;
     } catch (e) {
       state = state.copyWith(
-        isLoading: false, 
+        isLoading: false,
         errorMessage: e.toString().replaceAll('Exception: ', ''),
       );
       return false;

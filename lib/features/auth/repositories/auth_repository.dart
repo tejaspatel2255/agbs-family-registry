@@ -6,39 +6,56 @@ class AuthRepository {
 
   String _mobileToEmail(String mobile) => '${mobile.trim()}@gmail.com';
 
+  /// Standard Member Login using Mobile Number (as email) & Password
+  Future<AuthResponse> signInMember({
+    required String mobile,
+    required String password,
+  }) async {
+    final email = _mobileToEmail(mobile);
+    return await _client.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
+  }
+
   /// 1. Send OTP via Supabase Edge Function (Brevo SMS API)
-  Future<Map<String, dynamic>> sendOtp(String mobile) async {
+  Future<Map<String, dynamic>> sendOtp(String mobile, {String purpose = 'signup'}) async {
     try {
       final response = await _client.functions.invoke(
         'send-otp',
-        body: {'mobile_number': mobile.trim()},
+        body: {
+          'mobile_number': mobile.trim(),
+          'purpose': purpose,
+        },
       );
 
-      if (response.status == 200) {
+      if (response.status == 200 && response.data?['success'] == true) {
         return {'success': true, 'message': 'OTP sent successfully to $mobile'};
       } else {
         final error = response.data?['error'] ?? 'Failed to send OTP';
         return {'success': false, 'message': error.toString()};
       }
     } catch (e) {
-      // Fallback local RPC / function trigger if Edge Function isn't deployed yet
+      // Fallback local RPC if Edge Function fails
       try {
         final res = await _client.rpc('send_otp_rpc', params: {'p_mobile': mobile.trim()});
         return {'success': true, 'message': 'OTP sent to $mobile', 'otp_preview': res};
       } catch (err) {
-        return {'success': false, 'message': 'Could not send OTP. ${e.toString()}'};
+        return {'success': false, 'message': 'Could not send OTP: ${e.toString()}'};
       }
     }
   }
 
-  /// 2. Verify OTP & Authenticate User (Sign In or Sign Up)
+  /// 2. Verify OTP & Register User
   Future<AuthResponse> verifyOtpAndLogin({
     required String mobile,
     required String otp,
+    String purpose = 'signup',
     String? fullName,
+    String? password,
   }) async {
     final email = _mobileToEmail(mobile);
-    final password = 'BrevoOTP#${mobile.trim()}#SecretKey2026';
+    final userPassword = password ?? 'BrevoOTP#${mobile.trim()}#SecretKey2026';
 
     // Verify OTP via Edge Function or RPC
     bool isOtpValid = false;
@@ -48,12 +65,17 @@ class AuthRepository {
         body: {
           'mobile_number': mobile.trim(),
           'otp': otp.trim(),
+          'purpose': purpose,
+          'full_name': fullName,
         },
       );
-      if (response.status == 200 && response.data?['valid'] == true) {
+      if (response.status == 200 && (response.data?['success'] == true || response.data?['valid'] == true)) {
         isOtpValid = true;
+      } else if (response.data?['error'] != null) {
+        throw AuthException(response.data!['error'].toString());
       }
-    } catch (_) {
+    } catch (e) {
+      if (e is AuthException) rethrow;
       // Fallback RPC check
       final rpcRes = await _client.rpc('verify_otp_rpc', params: {
         'p_mobile': mobile.trim(),
@@ -68,11 +90,11 @@ class AuthRepository {
       throw const AuthException('Invalid or expired OTP. Please try again.');
     }
 
-    // Try signing in existing user
+    // After OTP verification, register user with email & password
     try {
       final response = await _client.auth.signInWithPassword(
         email: email,
-        password: password,
+        password: userPassword,
       );
 
       if (response.user != null && fullName != null && fullName.isNotEmpty) {
@@ -86,11 +108,10 @@ class AuthRepository {
 
       return response;
     } on AuthException catch (e) {
-      // If user does not exist, create new account automatically
       if (e.message.contains('Invalid login credentials') || e.statusCode == '400') {
         final signUpRes = await _client.auth.signUp(
           email: email,
-          password: password,
+          password: userPassword,
           data: {
             'full_name': fullName ?? 'Member',
             'mobile_number': mobile.trim(),
@@ -122,7 +143,7 @@ class AuthRepository {
     );
   }
 
-  /// Fetch user profile from Supabase profiles table
+  /// Fetch user profile
   Future<Map<String, dynamic>?> getUserProfile(String userId) async {
     try {
       final res = await _client
@@ -136,7 +157,6 @@ class AuthRepository {
     }
   }
 
-  /// Sign out current user
   Future<void> signOut() async {
     await _client.auth.signOut();
   }
