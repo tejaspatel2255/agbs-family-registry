@@ -76,30 +76,34 @@ class _SplashScreenState extends State<SplashScreen> {
 
                   const SizedBox(height: 16),
 
-                  // 2. Family Photo / Silhouette Icon Container
+                  // 2. Official AGBS Parashurama Logo Container
                   Container(
                     width: 140,
                     height: 140,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.12),
+                      color: Colors.white,
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.4),
-                        width: 2,
+                        color: Colors.white.withOpacity(0.8),
+                        width: 3,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
+                          color: Colors.black.withOpacity(0.25),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
                         ),
                       ],
                     ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.family_restroom_rounded,
-                        size: 72,
-                        color: Colors.white,
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/app_logo.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (ctx, err, stack) => const Icon(
+                          Icons.family_restroom_rounded,
+                          size: 72,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ),
                   ),
