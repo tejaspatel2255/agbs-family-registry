@@ -108,7 +108,7 @@ class AppTheme {
         ),
         hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: Colors.white,
         elevation: 2,
         shadowColor: AppColors.primary.withOpacity(0.08),
