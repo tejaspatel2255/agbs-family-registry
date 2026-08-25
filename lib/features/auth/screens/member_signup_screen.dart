@@ -59,8 +59,9 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(res['message'] ?? 'OTP sent to $mobile via Brevo SMS'),
+          content: Text(res['message'] ?? 'OTP sent to $mobile'),
           backgroundColor: AppColors.success,
+          duration: const Duration(seconds: 10),
         ),
       );
     }
