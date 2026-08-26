@@ -18,9 +18,11 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
   final _fullNameController = TextEditingController();
   final _mobileController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _otpController = TextEditingController();
 
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   bool _otpSent = false;
   int _cooldownSeconds = 0;
   Timer? _cooldownTimer;
@@ -30,6 +32,7 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
     _fullNameController.dispose();
     _mobileController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _otpController.dispose();
     _cooldownTimer?.cancel();
     super.dispose();
@@ -47,8 +50,19 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
     });
   }
 
+  bool _hasMinLength(String p) => p.length >= 8;
+  bool _hasLetter(String p) => RegExp(r'[a-zA-Z]').hasMatch(p);
+  bool _hasDigit(String p) => RegExp(r'[0-9]').hasMatch(p);
+
+  bool get _isPasswordValid {
+    final p = _passwordController.text.trim();
+    final c = _confirmPasswordController.text.trim();
+    return _hasMinLength(p) && _hasLetter(p) && _hasDigit(p) && p == c && c.isNotEmpty;
+  }
+
   Future<void> _handleSendOtp() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!_isPasswordValid) return;
 
     final mobile = _mobileController.text.trim();
     final res = await ref.read(authStateProvider.notifier).sendOtp(mobile, purpose: 'signup');
@@ -217,9 +231,11 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
+                    onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
                       labelText: 'Password *',
-                      hintText: 'At least 6 characters',
+                      hintText: 'Minimum 8 characters',
+                      helperText: 'Your password must be at least 8 characters with a letter and a number.',
                       prefixIcon: const Icon(Icons.lock_outline_rounded),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -233,11 +249,95 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
                       ),
                     ),
                     validator: (val) {
-                      if (val == null || val.length < 6) {
-                        return 'Password must be at least 6 characters';
+                      if (val == null || val.isEmpty) {
+                        return 'Password is required';
+                      }
+                      if (!_hasMinLength(val)) {
+                        return 'Password must be at least 8 characters';
+                      }
+                      if (!_hasLetter(val)) {
+                        return 'Password must contain at least one letter';
+                      }
+                      if (!_hasDigit(val)) {
+                        return 'Password must contain at least one number';
                       }
                       return null;
                     },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    obscureText: _obscureConfirmPassword,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      labelText: 'Retype Password *',
+                      hintText: 'Retype your password',
+                      prefixIcon: const Icon(Icons.lock_reset_rounded),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscureConfirmPassword = !_obscureConfirmPassword;
+                          });
+                        },
+                      ),
+                    ),
+                    validator: (val) {
+                      if (val == null || val.isEmpty) {
+                        return 'Please retype your password';
+                      }
+                      if (val != _passwordController.text) {
+                        return 'Passwords do not match';
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Password Requirements Card
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Password Requirements:',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        _buildRuleItem(
+                          'At least 8 characters long',
+                          _hasMinLength(_passwordController.text),
+                        ),
+                        _buildRuleItem(
+                          'Contains at least one letter (A-Z, a-z)',
+                          _hasLetter(_passwordController.text),
+                        ),
+                        _buildRuleItem(
+                          'Contains at least one number (0-9)',
+                          _hasDigit(_passwordController.text),
+                        ),
+                        _buildRuleItem(
+                          'Both fields must match',
+                          _passwordController.text.isNotEmpty &&
+                              _passwordController.text == _confirmPasswordController.text,
+                        ),
+                      ],
+                    ),
                   ),
 
                   const SizedBox(height: 28),
@@ -246,7 +346,7 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                     ),
-                    onPressed: authState.isLoading ? null : _handleSendOtp,
+                    onPressed: (_isPasswordValid && !authState.isLoading) ? _handleSendOtp : null,
                     child: authState.isLoading
                         ? const SizedBox(
                             width: 24,
@@ -344,6 +444,31 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildRuleItem(String text, bool isMet) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      child: Row(
+        children: [
+          Icon(
+            isMet ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+            size: 16,
+            color: isMet ? AppColors.success : AppColors.textMuted,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: isMet ? AppColors.textPrimary : AppColors.textMuted,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
