@@ -162,7 +162,6 @@ class AuthRepository {
       final response = await _client.functions.invoke(
         'reset-password',
         body: {
-          'mobile_number': mobile.trim(),
           'reset_token': resetToken.trim(),
           'new_password': newPassword.trim(),
         },

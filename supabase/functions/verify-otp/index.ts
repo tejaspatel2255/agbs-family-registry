@@ -79,26 +79,52 @@ serve(async (req) => {
       );
     }
 
-    // If purpose === 'reset_password': Generate reset token and return it
+    // If purpose === 'reset_password'
     if (purpose === "reset_password") {
-      const resetToken = crypto.randomUUID();
-      const resetTokenExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins
+      // Look up admin profile by mobile_number
+      const { data: profile, error: profErr } = await supabase
+        .from("profiles")
+        .select("id, role")
+        .eq("mobile_number", mobileClean)
+        .maybeSingle();
 
+      if (profErr || !profile || profile.role !== "admin") {
+        return new Response(
+          JSON.stringify({ error: "No admin account found for this number" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Mark OTP as verified
       await supabase
         .from("otp_verifications")
-        .update({
-          verified: true,
-          reset_token: resetToken,
-          reset_token_expires_at: resetTokenExpiresAt,
-          reset_token_used: false,
-        })
+        .update({ verified: true })
         .eq("id", record.id);
+
+      // Generate secure random token, insert row into password_reset_tokens (expires in 10 mins)
+      const resetToken = crypto.randomUUID();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+      const { error: tokenInsertErr } = await supabase
+        .from("password_reset_tokens")
+        .insert({
+          mobile_number: mobileClean,
+          token: resetToken,
+          expires_at: expiresAt,
+          used: false,
+        });
+
+      if (tokenInsertErr) {
+        return new Response(
+          JSON.stringify({ error: `Failed to create reset token: ${tokenInsertErr.message}` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
       return new Response(
         JSON.stringify({
           success: true,
           reset_token: resetToken,
-          message: "OTP verified. You may now reset your password.",
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

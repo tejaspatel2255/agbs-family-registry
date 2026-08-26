@@ -16,19 +16,38 @@ serve(async (req) => {
   }
 
   try {
-    const { mobile_number, reset_token, new_password } = await req.json();
-    const mobileClean = (mobile_number || "").toString().trim();
+    const { reset_token, new_password } = await req.json();
     const tokenClean = (reset_token || "").toString().trim();
     const passwordClean = (new_password || "").toString();
 
-    if (!mobileClean || !tokenClean || !passwordClean) {
+    if (!tokenClean || !passwordClean) {
       return new Response(
-        JSON.stringify({ error: "Missing required parameters." }),
+        JSON.stringify({ error: "Reset token and new password are required." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Password strength check: Min 8 chars, at least 1 letter, at least 1 number
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // 1. Look up token in password_reset_tokens table (must exist, not used, not expired)
+    const now = new Date().toISOString();
+    const { data: tokenRecord, error: tokenErr } = await supabase
+      .from("password_reset_tokens")
+      .select("*")
+      .eq("token", tokenClean)
+      .eq("used", false)
+      .gt("expires_at", now)
+      .limit(1)
+      .maybeSingle();
+
+    if (tokenErr || !tokenRecord) {
+      return new Response(
+        JSON.stringify({ error: "Reset link expired, please try again." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 2. Validate password strength rule (min 8 chars, at least one letter and one number)
     if (
       passwordClean.length < 8 ||
       !/[a-zA-Z]/.test(passwordClean) ||
@@ -42,42 +61,21 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-    // 1. Verify reset_token in otp_verifications table
-    const now = new Date().toISOString();
-    const { data: record, error: tokenErr } = await supabase
-      .from("otp_verifications")
-      .select("*")
-      .eq("mobile_number", mobileClean)
-      .eq("reset_token", tokenClean)
-      .eq("reset_token_used", false)
-      .gt("reset_token_expires_at", now)
-      .limit(1)
-      .maybeSingle();
-
-    if (tokenErr || !record) {
-      return new Response(
-        JSON.stringify({ error: "Invalid, expired, or already used password reset token." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // 2. Fetch admin user profile ID
+    // 3. Find Admin user profile linked to mobile_number
     const { data: profile, error: profErr } = await supabase
       .from("profiles")
       .select("id, role")
-      .eq("mobile_number", mobileClean)
+      .eq("mobile_number", tokenRecord.mobile_number)
       .maybeSingle();
 
     if (profErr || !profile || profile.role !== "admin") {
       return new Response(
-        JSON.stringify({ error: "Admin profile not found for this mobile number." }),
+        JSON.stringify({ error: "Admin account not found for this reset token." }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // 3. Update Supabase Auth Password via Admin API
+    // 4. Update Admin user password via Supabase Admin API
     const { error: updateErr } = await supabase.auth.admin.updateUserById(
       profile.id,
       { password: passwordClean }
@@ -90,17 +88,14 @@ serve(async (req) => {
       );
     }
 
-    // 4. Mark reset_token as used
+    // 5. Mark token as used = true
     await supabase
-      .from("otp_verifications")
-      .update({ reset_token_used: true })
-      .eq("id", record.id);
+      .from("password_reset_tokens")
+      .update({ used: true })
+      .eq("id", tokenRecord.id);
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Password updated successfully! Please log in with your new password.",
-      }),
+      JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {
