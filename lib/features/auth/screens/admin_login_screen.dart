@@ -180,6 +180,23 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                           )
                         : const Text('Login as Admin'),
                   ),
+
+                  const SizedBox(height: 16),
+
+                  Center(
+                    child: TextButton(
+                      onPressed: () {
+                        context.push('/admin-forgot-password');
+                      },
+                      child: Text(
+                        'Forgot Password?',
+                        style: GoogleFonts.inter(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

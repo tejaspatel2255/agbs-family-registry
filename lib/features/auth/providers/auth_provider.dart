@@ -108,11 +108,57 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Admin Login
-  Future<bool> loginAdmin(String email, String password) async {
+  /// Verify Password Reset OTP to get reset token
+  Future<String?> verifyPasswordResetOtp({
+    required String mobile,
+    required String otp,
+  }) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      final response = await _repository.signInAdmin(email: email, password: password);
+      final resetToken = await _repository.verifyPasswordResetOtp(
+        mobile: mobile,
+        otp: otp,
+      );
+      state = state.copyWith(isLoading: false);
+      return resetToken;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: e.toString().replaceAll('Exception: ', '').replaceAll('AuthException: ', ''),
+      );
+      return null;
+    }
+  }
+
+  /// Reset Admin Password
+  Future<bool> resetAdminPassword({
+    required String mobile,
+    required String resetToken,
+    required String newPassword,
+  }) async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
+    try {
+      final success = await _repository.resetAdminPassword(
+        mobile: mobile,
+        resetToken: resetToken,
+        newPassword: newPassword,
+      );
+      state = state.copyWith(isLoading: false);
+      return success;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: e.toString().replaceAll('Exception: ', '').replaceAll('AuthException: ', ''),
+      );
+      return false;
+    }
+  }
+
+  /// Admin Login
+  Future<bool> loginAdmin(String emailOrMobile, String password) async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
+    try {
+      final response = await _repository.signInAdmin(emailOrMobile: emailOrMobile, password: password);
       if (response.user != null) {
         final profile = await _repository.getUserProfile(response.user!.id);
         final role = profile?['role'] ?? 'member';
@@ -134,7 +180,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: e.toString().replaceAll('Exception: ', ''),
+        errorMessage: e.toString().replaceAll('Exception: ', '').replaceAll('AuthException: ', ''),
       );
       return false;
     }

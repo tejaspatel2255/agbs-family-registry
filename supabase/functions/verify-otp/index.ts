@@ -79,7 +79,32 @@ serve(async (req) => {
       );
     }
 
-    // 4. Mark verified = true
+    // If purpose === 'reset_password': Generate reset token and return it
+    if (purpose === "reset_password") {
+      const resetToken = crypto.randomUUID();
+      const resetTokenExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins
+
+      await supabase
+        .from("otp_verifications")
+        .update({
+          verified: true,
+          reset_token: resetToken,
+          reset_token_expires_at: resetTokenExpiresAt,
+          reset_token_used: false,
+        })
+        .eq("id", record.id);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          reset_token: resetToken,
+          message: "OTP verified. You may now reset your password.",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 4. Mark verified = true for normal login/signup
     await supabase
       .from("otp_verifications")
       .update({ verified: true })

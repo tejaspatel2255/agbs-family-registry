@@ -121,11 +121,89 @@ class AuthRepository {
     }
   }
 
-  /// Sign in admin using Email & Password
+  /// 3. Verify Password Reset OTP and get reset_token
+  Future<String> verifyPasswordResetOtp({
+    required String mobile,
+    required String otp,
+  }) async {
+    try {
+      final response = await _client.functions.invoke(
+        'verify-otp',
+        body: {
+          'mobile_number': mobile.trim(),
+          'otp': otp.trim(),
+          'purpose': 'reset_password',
+        },
+      );
+
+      if (response.status == 200 && response.data != null && response.data['success'] == true) {
+        final resetToken = response.data['reset_token'];
+        if (resetToken != null && resetToken.toString().isNotEmpty) {
+          return resetToken.toString();
+        }
+        throw const AuthException('Reset token was not returned.');
+      } else {
+        final errMsg = response.data?['error'] ?? 'Invalid or expired OTP.';
+        throw AuthException(errMsg.toString());
+      }
+    } catch (e) {
+      if (e is AuthException) rethrow;
+      throw AuthException(e.toString().replaceAll('FunctionException: ', ''));
+    }
+  }
+
+  /// 4. Execute Password Reset with token and new password
+  Future<bool> resetAdminPassword({
+    required String mobile,
+    required String resetToken,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _client.functions.invoke(
+        'reset-password',
+        body: {
+          'mobile_number': mobile.trim(),
+          'reset_token': resetToken.trim(),
+          'new_password': newPassword.trim(),
+        },
+      );
+
+      if (response.status == 200 && response.data != null && response.data['success'] == true) {
+        return true;
+      } else {
+        final errMsg = response.data?['error'] ?? 'Failed to reset password.';
+        throw AuthException(errMsg.toString());
+      }
+    } catch (e) {
+      if (e is AuthException) rethrow;
+      throw AuthException(e.toString().replaceAll('FunctionException: ', ''));
+    }
+  }
+
+  /// Sign in admin using Email or Mobile Number & Password
   Future<AuthResponse> signInAdmin({
-    required String email,
+    required String emailOrMobile,
     required String password,
   }) async {
+    final input = emailOrMobile.trim();
+    String email = input;
+
+    // If input is 10-digit mobile number, check profiles for corresponding email/user
+    if (RegExp(r'^[6-9]\d{9}$').hasMatch(input)) {
+      final profile = await _client
+          .from('profiles')
+          .select('id')
+          .eq('mobile_number', input)
+          .maybeSingle();
+
+      if (profile != null) {
+        final userRes = await _client.auth.admin.getUserById(profile['id']);
+        if (userRes.user?.email != null) {
+          email = userRes.user!.email!;
+        }
+      }
+    }
+
     return await _client.auth.signInWithPassword(
       email: email,
       password: password,

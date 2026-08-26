@@ -36,8 +36,24 @@ serve(async (req) => {
       );
     }
 
-    const validPurpose = ["signup", "login"].includes(purpose) ? purpose : "signup";
+    const validPurpose = ["signup", "login", "reset_password"].includes(purpose) ? purpose : "signup";
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // 1b. If purpose is reset_password, verify that an Admin profile exists for this mobile number
+    if (validPurpose === "reset_password") {
+      const { data: profile, error: profErr } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("mobile_number", mobileClean)
+        .maybeSingle();
+
+      if (profErr || !profile || profile.role !== "admin") {
+        return new Response(
+          JSON.stringify({ error: "No registered Admin account found for this mobile number." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     // 2. Rate Limit Cooldown (30 seconds)
     const thirtySecsAgo = new Date(Date.now() - 30 * 1000).toISOString();
@@ -82,6 +98,10 @@ serve(async (req) => {
     let brevoSuccess = false;
     let brevoErrMsg = "";
 
+    const smsMessage = validPurpose === "reset_password"
+      ? `Your AGBS Admin Password Reset OTP is ${otp}. Valid for 5 minutes. Do not share this code.`
+      : `Your AGBS Family Registry OTP is ${otp}. Valid for 5 minutes. Do not share this code.`;
+
     try {
       const brevoResponse = await fetch("https://api.brevo.com/v3/transactionalSMS/sms", {
         method: "POST",
@@ -92,7 +112,7 @@ serve(async (req) => {
         body: JSON.stringify({
           sender: BREVO_SENDER,
           recipient: `91${mobileClean}`,
-          content: `Your AGBS Family Registry OTP is ${otp}. Valid for 5 minutes. Do not share this code.`,
+          content: smsMessage,
           type: "transactional",
         }),
       });
