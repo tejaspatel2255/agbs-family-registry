@@ -180,7 +180,24 @@ class _MemberLoginScreenState extends ConsumerState<MemberLoginScreen> {
                         : const Text('Member Sign In'),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 14),
+
+                  Center(
+                    child: TextButton(
+                      onPressed: () {
+                        context.push('/member-forgot-password');
+                      },
+                      child: Text(
+                        'Forgot Password?',
+                        style: GoogleFonts.inter(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
 
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
