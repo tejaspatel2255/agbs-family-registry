@@ -91,12 +91,17 @@ class FamilyRepository {
     }
   }
 
-  /// Delete a family record by ID
+  /// Delete a family record by ID and all associated family members
   Future<bool> deleteFamily(String familyId) async {
     try {
+      // 1. Delete associated family members first to avoid FK constraint errors
+      await _client.from('family_members').delete().eq('family_id', familyId);
+
+      // 2. Delete the family record
       await _client.from('families').delete().eq('id', familyId);
       return true;
     } catch (e) {
+      print('Family delete error: $e');
       return false;
     }
   }
