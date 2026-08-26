@@ -117,7 +117,7 @@ class _MemberForgotPasswordScreenState extends ConsumerState<MemberForgotPasswor
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Password updated successfully! Please log in with your new password.'),
+          content: Text('Password updated successfully'),
           backgroundColor: AppColors.success,
           duration: Duration(seconds: 4),
         ),
@@ -202,7 +202,7 @@ class _MemberForgotPasswordScreenState extends ConsumerState<MemberForgotPasswor
 
                 Text(
                   _currentStep == 1
-                      ? 'Forgot Member Password?'
+                      ? 'Forgot Password'
                       : _currentStep == 2
                           ? 'Enter 6-Digit OTP'
                           : 'Create New Password',
@@ -218,7 +218,7 @@ class _MemberForgotPasswordScreenState extends ConsumerState<MemberForgotPasswor
 
                 Text(
                   _currentStep == 1
-                      ? 'Enter your registered mobile number to receive a reset code.'
+                      ? 'Enter your registered mobile number to receive an OTP.'
                       : _currentStep == 2
                           ? 'Enter the verification code sent to +91 ${_mobileController.text}'
                           : 'Your new password must be at least 8 characters with a letter and a number.',
