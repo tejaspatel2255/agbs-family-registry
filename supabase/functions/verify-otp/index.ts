@@ -88,7 +88,7 @@ serve(async (req) => {
         .eq("mobile_number", mobileClean)
         .maybeSingle();
 
-      if (profErr || !profile) {
+      if (profErr || !profile || profile.role !== "member") {
         return new Response(
           JSON.stringify({ error: "No account found for this number" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

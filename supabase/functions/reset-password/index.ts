@@ -68,9 +68,9 @@ serve(async (req) => {
       .eq("mobile_number", tokenRecord.mobile_number)
       .maybeSingle();
 
-    if (profErr || !profile) {
+    if (profErr || !profile || profile.role !== "member") {
       return new Response(
-        JSON.stringify({ error: "User account not found for this reset token." }),
+        JSON.stringify({ error: "No member account found for this reset token." }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
