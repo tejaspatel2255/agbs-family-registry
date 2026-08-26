@@ -61,21 +61,21 @@ serve(async (req) => {
       );
     }
 
-    // 3. Find Admin user profile linked to mobile_number
+    // 3. Find user profile linked to mobile_number
     const { data: profile, error: profErr } = await supabase
       .from("profiles")
       .select("id, role")
       .eq("mobile_number", tokenRecord.mobile_number)
       .maybeSingle();
 
-    if (profErr || !profile || profile.role !== "admin") {
+    if (profErr || !profile) {
       return new Response(
-        JSON.stringify({ error: "Admin account not found for this reset token." }),
+        JSON.stringify({ error: "User account not found for this reset token." }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // 4. Update Admin user password via Supabase Admin API
+    // 4. Update user password via Supabase Admin API
     const { error: updateErr } = await supabase.auth.admin.updateUserById(
       profile.id,
       { password: passwordClean }

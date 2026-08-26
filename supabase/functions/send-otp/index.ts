@@ -39,7 +39,7 @@ serve(async (req) => {
     const validPurpose = ["signup", "login", "reset_password"].includes(purpose) ? purpose : "signup";
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // 1b. If purpose is reset_password, verify that an Admin profile exists for this mobile number
+    // 1b. If purpose is reset_password, verify that a Member profile exists for this mobile number
     if (validPurpose === "reset_password") {
       const { data: profile, error: profErr } = await supabase
         .from("profiles")
@@ -47,9 +47,9 @@ serve(async (req) => {
         .eq("mobile_number", mobileClean)
         .maybeSingle();
 
-      if (profErr || !profile || profile.role !== "admin") {
+      if (profErr || !profile) {
         return new Response(
-          JSON.stringify({ error: "No registered Admin account found for this mobile number." }),
+          JSON.stringify({ error: "No registered account found for this mobile number." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -99,7 +99,7 @@ serve(async (req) => {
     let brevoErrMsg = "";
 
     const smsMessage = validPurpose === "reset_password"
-      ? `Your AGBS Admin Password Reset OTP is ${otp}. Valid for 5 minutes. Do not share this code.`
+      ? `Your AGBS Password Reset OTP is ${otp}. Valid for 5 minutes. Do not share this code.`
       : `Your AGBS Family Registry OTP is ${otp}. Valid for 5 minutes. Do not share this code.`;
 
     try {

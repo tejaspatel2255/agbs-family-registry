@@ -81,16 +81,16 @@ serve(async (req) => {
 
     // If purpose === 'reset_password'
     if (purpose === "reset_password") {
-      // Look up admin profile by mobile_number
+      // Look up profile by mobile_number
       const { data: profile, error: profErr } = await supabase
         .from("profiles")
         .select("id, role")
         .eq("mobile_number", mobileClean)
         .maybeSingle();
 
-      if (profErr || !profile || profile.role !== "admin") {
+      if (profErr || !profile) {
         return new Response(
-          JSON.stringify({ error: "No admin account found for this number" }),
+          JSON.stringify({ error: "No account found for this number" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
