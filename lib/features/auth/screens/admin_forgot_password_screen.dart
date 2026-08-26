@@ -117,7 +117,7 @@ class _AdminForgotPasswordScreenState extends ConsumerState<AdminForgotPasswordS
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Password reset successfully! Please login with your new password.'),
+          content: Text('Password updated successfully'),
           backgroundColor: AppColors.success,
           duration: Duration(seconds: 4),
         ),
@@ -126,9 +126,25 @@ class _AdminForgotPasswordScreenState extends ConsumerState<AdminForgotPasswordS
     }
   }
 
+  void _restartFlow() {
+    setState(() {
+      _currentStep = 1;
+      _resetToken = null;
+      _otpController.clear();
+      _newPasswordController.clear();
+      _confirmPasswordController.clear();
+    });
+  }
+
   bool _hasMinLength(String p) => p.length >= 8;
   bool _hasLetter(String p) => RegExp(r'[a-zA-Z]').hasMatch(p);
   bool _hasDigit(String p) => RegExp(r'[0-9]').hasMatch(p);
+
+  bool get _isPasswordValid {
+    final p = _newPasswordController.text.trim();
+    final c = _confirmPasswordController.text.trim();
+    return _hasMinLength(p) && _hasLetter(p) && _hasDigit(p) && p == c && c.isNotEmpty;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -138,7 +154,7 @@ class _AdminForgotPasswordScreenState extends ConsumerState<AdminForgotPasswordS
       appBar: AppBar(
         title: Text(
           _currentStep == 1
-              ? 'Reset Admin Password'
+              ? 'Forgot Password'
               : _currentStep == 2
                   ? 'Verify Reset OTP'
                   : 'Set New Password',
@@ -186,7 +202,7 @@ class _AdminForgotPasswordScreenState extends ConsumerState<AdminForgotPasswordS
 
                 Text(
                   _currentStep == 1
-                      ? 'Forgot Admin Password?'
+                      ? 'Forgot Password'
                       : _currentStep == 2
                           ? 'Enter 6-Digit OTP'
                           : 'Create New Password',
@@ -202,7 +218,7 @@ class _AdminForgotPasswordScreenState extends ConsumerState<AdminForgotPasswordS
 
                 Text(
                   _currentStep == 1
-                      ? 'Enter your registered Admin mobile number to receive a reset code.'
+                      ? 'Enter your registered Admin mobile number to receive an OTP.'
                       : _currentStep == 2
                           ? 'Enter the verification code sent to +91 ${_mobileController.text}'
                           : 'Your new password must be at least 8 characters with a letter and a number.',
@@ -215,7 +231,7 @@ class _AdminForgotPasswordScreenState extends ConsumerState<AdminForgotPasswordS
 
                 const SizedBox(height: 28),
 
-                if (authState.errorMessage != null)
+                if (authState.errorMessage != null) ...[
                   Container(
                     padding: const EdgeInsets.all(12),
                     margin: const EdgeInsets.only(bottom: 20),
@@ -224,12 +240,28 @@ class _AdminForgotPasswordScreenState extends ConsumerState<AdminForgotPasswordS
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: AppColors.error.withOpacity(0.3)),
                     ),
-                    child: Text(
-                      authState.errorMessage!,
-                      style: const TextStyle(color: AppColors.error, fontSize: 13),
-                      textAlign: TextAlign.center,
+                    child: Column(
+                      children: [
+                        Text(
+                          authState.errorMessage!,
+                          style: const TextStyle(color: AppColors.error, fontSize: 13),
+                          textAlign: TextAlign.center,
+                        ),
+                        if (_currentStep == 3) ...[
+                          const SizedBox(height: 8),
+                          TextButton.icon(
+                            onPressed: _restartFlow,
+                            icon: const Icon(Icons.refresh_rounded, size: 16, color: AppColors.error),
+                            label: const Text(
+                              'Restart Reset Request',
+                              style: TextStyle(color: AppColors.error, fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
+                ],
 
                 // STEP 1: Enter Mobile Number
                 if (_currentStep == 1) ...[
@@ -243,7 +275,7 @@ class _AdminForgotPasswordScreenState extends ConsumerState<AdminForgotPasswordS
                           keyboardType: TextInputType.phone,
                           maxLength: 10,
                           decoration: const InputDecoration(
-                            labelText: 'Registered Admin Mobile Number',
+                            labelText: 'Registered Mobile Number',
                             hintText: 'Enter 10-digit mobile number',
                             prefixIcon: Icon(Icons.phone_android_rounded),
                             counterText: '',
@@ -258,6 +290,9 @@ class _AdminForgotPasswordScreenState extends ConsumerState<AdminForgotPasswordS
                         const SizedBox(height: 28),
                         ElevatedButton(
                           onPressed: authState.isLoading ? null : _handleSendOtp,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryDark,
+                          ),
                           child: authState.isLoading
                               ? const SizedBox(
                                   width: 24,
@@ -267,7 +302,7 @@ class _AdminForgotPasswordScreenState extends ConsumerState<AdminForgotPasswordS
                                     strokeWidth: 2.5,
                                   ),
                                 )
-                              : const Text('Send Reset OTP via SMS'),
+                              : const Text('Send OTP'),
                         ),
                       ],
                     ),
@@ -307,6 +342,9 @@ class _AdminForgotPasswordScreenState extends ConsumerState<AdminForgotPasswordS
                         const SizedBox(height: 24),
                         ElevatedButton(
                           onPressed: authState.isLoading ? null : _handleVerifyOtp,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryDark,
+                          ),
                           child: authState.isLoading
                               ? const SizedBox(
                                   width: 24,
@@ -364,21 +402,6 @@ class _AdminForgotPasswordScreenState extends ConsumerState<AdminForgotPasswordS
                               },
                             ),
                           ),
-                          validator: (val) {
-                            if (val == null || val.isEmpty) {
-                              return 'New password is required';
-                            }
-                            if (!_hasMinLength(val)) {
-                              return 'Password must be at least 8 characters';
-                            }
-                            if (!_hasLetter(val)) {
-                              return 'Password must contain at least one letter';
-                            }
-                            if (!_hasDigit(val)) {
-                              return 'Password must contain at least one number';
-                            }
-                            return null;
-                          },
                         ),
                         const SizedBox(height: 16),
 
@@ -386,8 +409,9 @@ class _AdminForgotPasswordScreenState extends ConsumerState<AdminForgotPasswordS
                         TextFormField(
                           controller: _confirmPasswordController,
                           obscureText: _obscureConfirmPassword,
+                          onChanged: (_) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Confirm New Password',
+                            labelText: 'Retype Password',
                             hintText: 'Retype your new password',
                             prefixIcon: const Icon(Icons.lock_reset_rounded),
                             suffixIcon: IconButton(
@@ -399,15 +423,6 @@ class _AdminForgotPasswordScreenState extends ConsumerState<AdminForgotPasswordS
                               },
                             ),
                           ),
-                          validator: (val) {
-                            if (val == null || val.isEmpty) {
-                              return 'Please retype your new password';
-                            }
-                            if (val != _newPasswordController.text) {
-                              return 'Passwords do not match';
-                            }
-                            return null;
-                          },
                         ),
 
                         const SizedBox(height: 16),
@@ -444,6 +459,11 @@ class _AdminForgotPasswordScreenState extends ConsumerState<AdminForgotPasswordS
                                 'Contains at least one number (0-9)',
                                 _hasDigit(_newPasswordController.text),
                               ),
+                              _buildRuleItem(
+                                'Both fields must match',
+                                _newPasswordController.text.isNotEmpty &&
+                                    _newPasswordController.text == _confirmPasswordController.text,
+                              ),
                             ],
                           ),
                         ),
@@ -451,7 +471,12 @@ class _AdminForgotPasswordScreenState extends ConsumerState<AdminForgotPasswordS
                         const SizedBox(height: 28),
 
                         ElevatedButton(
-                          onPressed: authState.isLoading ? null : _handleResetPassword,
+                          onPressed: (_isPasswordValid && !authState.isLoading)
+                              ? _handleResetPassword
+                              : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryDark,
+                          ),
                           child: authState.isLoading
                               ? const SizedBox(
                                   width: 24,
@@ -461,7 +486,7 @@ class _AdminForgotPasswordScreenState extends ConsumerState<AdminForgotPasswordS
                                     strokeWidth: 2.5,
                                   ),
                                 )
-                              : const Text('Save New Password'),
+                              : const Text('Save'),
                         ),
                       ],
                     ),
