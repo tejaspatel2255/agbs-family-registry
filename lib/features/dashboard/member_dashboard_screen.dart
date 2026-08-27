@@ -22,7 +22,8 @@ class _MemberDashboardScreenState extends ConsumerState<MemberDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await ref.read(authStateProvider.notifier).loadUserProfile();
       ref.read(familyStateProvider.notifier).loadFamilies();
     });
   }

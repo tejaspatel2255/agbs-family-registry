@@ -56,9 +56,15 @@ class FamilyNotifier extends StateNotifier<FamilyState> {
   Future<void> loadFamilies() async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      final authState = _ref.read(authStateProvider);
-      final currentUser = _ref.read(currentUserProvider);
-      final isAdmin = authState.profile?['role'] == 'admin';
+      bool isAdmin = false;
+      final profile = authState.profile;
+      if (profile != null) {
+        final role = profile['role']?.toString();
+        final rolesList = profile['roles'] is List ? List<String>.from(profile['roles']) : [];
+        if (role == 'admin' || rolesList.contains('admin')) {
+          isAdmin = true;
+        }
+      }
 
       final list = await _repository.fetchFamilies(
         isAdmin: isAdmin,

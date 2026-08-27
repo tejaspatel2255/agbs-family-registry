@@ -18,8 +18,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(authStateProvider.notifier).loadUserProfile();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await ref.read(authStateProvider.notifier).loadUserProfile();
       ref.read(familyStateProvider.notifier).loadFamilies();
     });
   }
