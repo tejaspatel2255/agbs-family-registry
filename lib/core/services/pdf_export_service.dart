@@ -6,7 +6,15 @@ import '../../features/family/models/family_model.dart';
 
 class PdfExportService {
   static Future<void> printFamilyDirectory(List<FamilyModel> families) async {
-    final pdf = pw.Document();
+    final fontRegular = await PdfGoogleFonts.poppinsRegular();
+    final fontBold = await PdfGoogleFonts.poppinsBold();
+
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: fontRegular,
+        bold: fontBold,
+      ),
+    );
 
     pdf.addPage(
       pw.MultiPage(
