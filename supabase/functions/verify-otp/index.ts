@@ -23,10 +23,12 @@ serve(async (req) => {
   }
 
   try {
-    const { mobile_number, otp, purpose, full_name, role } = await req.json();
+    const body = await req.json();
+    const { mobile_number, otp, purpose, full_name, role, requested_role, password } = body;
     const mobileClean = (mobile_number || "").toString().trim();
     const otpClean = (otp || "").toString().trim();
-    const targetRole = role === "admin" ? "admin" : "member";
+    const reqRoleRaw = requested_role || role;
+    const targetRole = reqRoleRaw === "admin" ? "admin" : "member";
 
     if (!mobileClean || !otpClean || !purpose) {
       return new Response(
@@ -68,7 +70,6 @@ serve(async (req) => {
     // 3. Hash input OTP & compare
     const inputHash = await hashOtp(otpClean);
     if (inputHash !== record.otp_hash) {
-      // Increment attempts
       await supabase
         .from("otp_verifications")
         .update({ attempts: record.attempts + 1 })
@@ -80,58 +81,43 @@ serve(async (req) => {
       );
     }
 
-    // If purpose === 'reset_password'
+    // Reset password purpose
     if (purpose === "reset_password") {
-      // Look up profile by mobile_number
       const { data: profile, error: profErr } = await supabase
         .from("profiles")
-        .select("id, role")
+        .select("id")
         .eq("mobile_number", mobileClean)
         .maybeSingle();
 
-      if (profErr || !profile || profile.role !== "member") {
+      if (profErr || !profile) {
         return new Response(
-          JSON.stringify({ error: "No account found for this number" }),
+          JSON.stringify({ error: "No account found for this number." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      // Mark OTP as verified
       await supabase
         .from("otp_verifications")
         .update({ verified: true })
         .eq("id", record.id);
 
-      // Generate secure random token, insert row into password_reset_tokens (expires in 10 mins)
       const resetToken = crypto.randomUUID();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-      const { error: tokenInsertErr } = await supabase
-        .from("password_reset_tokens")
-        .insert({
-          mobile_number: mobileClean,
-          token: resetToken,
-          expires_at: expiresAt,
-          used: false,
-        });
-
-      if (tokenInsertErr) {
-        return new Response(
-          JSON.stringify({ error: `Failed to create reset token: ${tokenInsertErr.message}` }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      await supabase.from("password_reset_tokens").insert({
+        mobile_number: mobileClean,
+        token: resetToken,
+        expires_at: expiresAt,
+        used: false,
+      });
 
       return new Response(
-        JSON.stringify({
-          success: true,
-          reset_token: resetToken,
-        }),
+        JSON.stringify({ success: true, reset_token: resetToken }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // 4. Mark verified = true for normal login/signup
+    // Mark OTP verified
     await supabase
       .from("otp_verifications")
       .update({ verified: true })
@@ -140,109 +126,152 @@ serve(async (req) => {
     const syntheticEmail = `${mobileClean}@agbs.app`;
 
     if (purpose === "signup") {
-      // Check if user already exists
+      // Check if profile already exists for this mobile
       const { data: existingProfile } = await supabase
         .from("profiles")
-        .select("id")
+        .select("id, roles, role, full_name")
         .eq("mobile_number", mobileClean)
         .maybeSingle();
 
-      let userId = existingProfile?.id;
+      if (existingProfile) {
+        let existingRoles: string[] = [];
+        if (Array.isArray(existingProfile.roles) && existingProfile.roles.length > 0) {
+          existingRoles = existingProfile.roles;
+        } else if (existingProfile.role) {
+          existingRoles = [existingProfile.role];
+        }
 
-      if (!userId) {
-        // Create auth user with random secure password
-        const randomPassword = `AGBS#${crypto.randomUUID()}`;
-        const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
-          email: syntheticEmail,
-          password: randomPassword,
-          email_confirm: true,
-          user_metadata: {
-            full_name: full_name || "Member",
-            mobile_number: mobileClean,
-          },
-        });
-
-        if (createErr || !newUser.user) {
+        // Case A: User already has requested_role
+        if (existingRoles.includes(targetRole)) {
           return new Response(
-            JSON.stringify({ error: createErr?.message || "Failed to create user account." }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            JSON.stringify({
+              error: `Already registered as ${targetRole}, please log in instead.`,
+            }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        userId = newUser.user.id;
+        // Case B: User exists, but doesn't have requested_role -> Add Role Flow
+        if (!password) {
+          return new Response(
+            JSON.stringify({ error: "Incorrect password for this account." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
 
-        // Create profile row
-        await supabase.from("profiles").upsert({
-          id: userId,
-          mobile_number: mobileClean,
-          role: targetRole,
-          full_name: full_name || (targetRole === "admin" ? "Admin" : "Member"),
+        // Verify password against auth
+        const { error: authErr } = await supabase.auth.signInWithPassword({
+          email: syntheticEmail,
+          password: password.trim(),
         });
+
+        if (authErr) {
+          return new Response(
+            JSON.stringify({ error: "Incorrect password for this account." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Append new role to existing roles
+        const updatedRoles = Array.from(new Set([...existingRoles, targetRole]));
+        await supabase
+          .from("profiles")
+          .update({
+            roles: updatedRoles,
+            role: targetRole,
+          })
+          .eq("id", existingProfile.id);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            added_role: targetRole,
+            user_id: existingProfile.id,
+            roles: updatedRoles,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
-      // Mint session for user
-      const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
-        type: "magiclink",
+      // Case C: New User Signup
+      const userPassword = password || `AGBS#${crypto.randomUUID()}`;
+      const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
         email: syntheticEmail,
+        password: userPassword,
+        email_confirm: true,
+        user_metadata: {
+          full_name: full_name || "User",
+          mobile_number: mobileClean,
+        },
       });
 
-      if (linkErr || !linkData) {
+      if (createErr || !newUser.user) {
         return new Response(
-          JSON.stringify({ error: "Failed to generate user session." }),
+          JSON.stringify({ error: createErr?.message || "Failed to create user account." }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      const userId = newUser.user.id;
+
+      await supabase.from("profiles").upsert({
+        id: userId,
+        mobile_number: mobileClean,
+        roles: [targetRole],
+        role: targetRole,
+        full_name: full_name || (targetRole === "admin" ? "Admin" : "Member"),
+      });
+
+      // Generate session
+      const { data: linkData } = await supabase.auth.admin.generateLink({
+        type: "magiclink",
+        email: syntheticEmail,
+      });
 
       return new Response(
         JSON.stringify({
           success: true,
           user_id: userId,
-          access_token: linkData.properties?.hashed_token || "",
-          refresh_token: linkData.properties?.action_link || "",
+          roles: [targetRole],
+          access_token: linkData?.properties?.hashed_token || "",
+          refresh_token: linkData?.properties?.action_link || "",
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } else {
-      // purpose === 'login'
+      // Login purpose
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id")
+        .select("id, roles, role")
         .eq("mobile_number", mobileClean)
         .maybeSingle();
 
       if (!profile) {
         return new Response(
-          JSON.stringify({ error: "Account not found for this mobile number. Please sign up first." }),
+          JSON.stringify({ error: "Account not found for this mobile number." }),
           { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      // Mint session for existing user
-      const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
-        type: "magiclink",
-        email: syntheticEmail,
-      });
-
-      if (linkErr || !linkData) {
-        return new Response(
-          JSON.stringify({ error: "Failed to create user session." }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      let existingRoles: string[] = [];
+      if (Array.isArray(profile.roles) && profile.roles.length > 0) {
+        existingRoles = profile.roles;
+      } else if (profile.role) {
+        existingRoles = [profile.role];
       }
 
       return new Response(
         JSON.stringify({
           success: true,
           user_id: profile.id,
-          access_token: linkData.properties?.hashed_token || "",
-          refresh_token: linkData.properties?.action_link || "",
+          roles: existingRoles,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-  } catch (err: any) {
+  } catch (e) {
     return new Response(
-      JSON.stringify({ error: err.message || "Internal server error." }),
+      JSON.stringify({ error: e.message || "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
