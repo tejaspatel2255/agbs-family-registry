@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/services/pdf_export_service.dart';
 import '../auth/providers/auth_provider.dart';
+import '../family/providers/family_provider.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -18,6 +20,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(authStateProvider.notifier).loadUserProfile();
+      ref.read(familyStateProvider.notifier).loadFamilies();
     });
   }
 
@@ -141,14 +144,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       title: const Text('Directory Export / Print'),
                       subtitle: const Text('Generate PDF directory for AGBS Samaj'),
                       trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Directory Export module ready. Preparing PDF directory...'),
-                            backgroundColor: AppColors.primary,
-                            duration: Duration(seconds: 4),
-                          ),
-                        );
+                      onTap: () async {
+                        final families = ref.read(familyStateProvider).families;
+                        await PdfExportService.printFamilyDirectory(families);
                       },
                     ),
                   ],
