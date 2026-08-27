@@ -83,6 +83,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String otp,
     String purpose = 'signup',
     String? fullName,
+    String? password,
     String role = 'member',
   }) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
@@ -92,6 +93,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         otp: otp,
         purpose: purpose,
         fullName: fullName,
+        password: password,
         role: role,
       );
       if (response.user != null) {
