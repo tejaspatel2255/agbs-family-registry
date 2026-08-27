@@ -53,6 +53,7 @@ class AuthRepository {
     String purpose = 'signup',
     String? fullName,
     String? password,
+    String role = 'member',
   }) async {
     final email = _mobileToEmail(mobile);
     final userPassword = password ?? 'BrevoOTP#${mobile.trim()}#SecretKey2026';
@@ -65,6 +66,7 @@ class AuthRepository {
           'otp': otp.trim(),
           'purpose': purpose,
           'full_name': fullName,
+          'role': role,
         },
       );
 
@@ -90,7 +92,7 @@ class AuthRepository {
         await _client.from('profiles').upsert({
           'id': response.user!.id,
           'mobile_number': mobile.trim(),
-          'role': 'member',
+          'role': role,
           'full_name': fullName.trim(),
         });
       }
@@ -102,7 +104,7 @@ class AuthRepository {
           email: email,
           password: userPassword,
           data: {
-            'full_name': fullName ?? 'Member',
+            'full_name': fullName ?? (role == 'admin' ? 'Admin' : 'Member'),
             'mobile_number': mobile.trim(),
           },
         );
@@ -111,8 +113,8 @@ class AuthRepository {
           await _client.from('profiles').upsert({
             'id': signUpRes.user!.id,
             'mobile_number': mobile.trim(),
-            'role': 'member',
-            'full_name': fullName ?? 'Member',
+            'role': role,
+            'full_name': fullName ?? (role == 'admin' ? 'Admin' : 'Member'),
           });
         }
         return signUpRes;

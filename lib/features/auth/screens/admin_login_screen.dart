@@ -180,6 +180,30 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                           )
                         : const Text('Login as Admin'),
                   ),
+
+                  const SizedBox(height: 20),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'New Admin? ',
+                        style: GoogleFonts.inter(color: AppColors.textSecondary),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          context.push('/admin-signup');
+                        },
+                        child: Text(
+                          'Register Here',
+                          style: GoogleFonts.inter(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),

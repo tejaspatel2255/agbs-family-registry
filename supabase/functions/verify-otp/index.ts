@@ -23,9 +23,10 @@ serve(async (req) => {
   }
 
   try {
-    const { mobile_number, otp, purpose, full_name } = await req.json();
+    const { mobile_number, otp, purpose, full_name, role } = await req.json();
     const mobileClean = (mobile_number || "").toString().trim();
     const otpClean = (otp || "").toString().trim();
+    const targetRole = role === "admin" ? "admin" : "member";
 
     if (!mobileClean || !otpClean || !purpose) {
       return new Response(
@@ -174,8 +175,8 @@ serve(async (req) => {
         await supabase.from("profiles").upsert({
           id: userId,
           mobile_number: mobileClean,
-          role: "member",
-          full_name: full_name || "Member",
+          role: targetRole,
+          full_name: full_name || (targetRole === "admin" ? "Admin" : "Member"),
         });
       }
 

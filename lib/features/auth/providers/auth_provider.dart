@@ -83,6 +83,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String otp,
     String purpose = 'signup',
     String? fullName,
+    String role = 'member',
   }) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
@@ -91,6 +92,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         otp: otp,
         purpose: purpose,
         fullName: fullName,
+        role: role,
       );
       if (response.user != null) {
         final profile = await _repository.getUserProfile(response.user!.id);
