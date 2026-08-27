@@ -9,14 +9,32 @@ class FamilyRepository {
   /// Fetch families with role check (Admin gets all, Member gets own)
   Future<List<FamilyModel>> fetchFamilies({required bool isAdmin, required String? userId}) async {
     try {
-      var query = _client.from('families').select('*, profiles:created_by(mobile_number)');
+      var query = _client.from('families').select('*');
       
       if (!isAdmin && userId != null) {
         query = query.eq('created_by', userId);
       }
 
       final data = await query.order('created_at', ascending: false);
-      return (data as List).map((e) => FamilyModel.fromJson(e)).toList();
+      final families = (data as List).map((e) => FamilyModel.fromJson(e)).toList();
+
+      try {
+        final profilesData = await _client.from('profiles').select('id, mobile_number');
+        final mobileMap = <String, String>{};
+        for (final p in profilesData as List) {
+          if (p['id'] != null && p['mobile_number'] != null) {
+            mobileMap[p['id'].toString()] = p['mobile_number'].toString();
+          }
+        }
+        return families.map((f) {
+          if (f.createdBy != null && mobileMap.containsKey(f.createdBy)) {
+            return f.copyWith(mobileNumber: mobileMap[f.createdBy]);
+          }
+          return f;
+        }).toList();
+      } catch (_) {
+        return families;
+      }
     } catch (e) {
       return [];
     }

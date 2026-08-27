@@ -82,4 +82,42 @@ class FamilyModel {
       'updated_at': updatedAt.toIso8601String(),
     };
   }
+
+  FamilyModel copyWith({
+    String? id,
+    String? familyCode,
+    String? fullName,
+    String? fatherHusbandName,
+    String? motherName,
+    DateTime? dateOfBirth,
+    String? gender,
+    String? bloodGroup,
+    String? maritalStatus,
+    String? address,
+    String? photoUrl,
+    int? memberCount,
+    String? createdBy,
+    String? mobileNumber,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return FamilyModel(
+      id: id ?? this.id,
+      familyCode: familyCode ?? this.familyCode,
+      fullName: fullName ?? this.fullName,
+      fatherHusbandName: fatherHusbandName ?? this.fatherHusbandName,
+      motherName: motherName ?? this.motherName,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      gender: gender ?? this.gender,
+      bloodGroup: bloodGroup ?? this.bloodGroup,
+      maritalStatus: maritalStatus ?? this.maritalStatus,
+      address: address ?? this.address,
+      photoUrl: photoUrl ?? this.photoUrl,
+      memberCount: memberCount ?? this.memberCount,
+      createdBy: createdBy ?? this.createdBy,
+      mobileNumber: mobileNumber ?? this.mobileNumber,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }
