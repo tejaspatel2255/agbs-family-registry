@@ -7,6 +7,7 @@ import '../../features/auth/screens/admin_signup_screen.dart';
 import '../../features/auth/screens/member_login_screen.dart';
 import '../../features/auth/screens/member_signup_screen.dart';
 import '../../features/auth/screens/member_forgot_password_screen.dart';
+import '../../features/auth/screens/role_selection_screen.dart';
 import '../../features/dashboard/admin_dashboard_screen.dart';
 import '../../features/dashboard/member_dashboard_screen.dart';
 import '../../features/family/screens/family_form_screen.dart';
@@ -21,6 +22,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/welcome',
       builder: (context, state) => const WelcomeScreen(),
+    ),
+    GoRoute(
+      path: '/select-role',
+      builder: (context, state) => const RoleSelectionScreen(),
     ),
     GoRoute(
       path: '/admin-login',

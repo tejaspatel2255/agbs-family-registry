@@ -24,6 +24,7 @@ class _AdminSignUpScreenState extends ConsumerState<AdminSignUpScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _otpSent = false;
+  bool _isAddRoleMode = false;
   int _cooldownSeconds = 0;
   Timer? _cooldownTimer;
 
@@ -56,6 +57,7 @@ class _AdminSignUpScreenState extends ConsumerState<AdminSignUpScreen> {
 
   bool get _isPasswordValid {
     final p = _passwordController.text.trim();
+    if (_isAddRoleMode) return p.isNotEmpty;
     final c = _confirmPasswordController.text.trim();
     return _hasMinLength(p) && _hasLetter(p) && _hasDigit(p) && p == c && c.isNotEmpty;
   }
@@ -65,6 +67,51 @@ class _AdminSignUpScreenState extends ConsumerState<AdminSignUpScreen> {
     if (!_isPasswordValid) return;
 
     final mobile = _mobileController.text.trim();
+
+    // Check existing profile
+    final profile = await ref.read(authStateProvider.notifier).getProfileByMobile(mobile);
+    if (profile != null) {
+      List<String> roles = [];
+      if (profile['roles'] != null && profile['roles'] is List) {
+        roles = List<String>.from(profile['roles']);
+      } else if (profile['role'] != null) {
+        roles = [profile['role'].toString()];
+      }
+
+      if (roles.contains('admin')) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("You are already registered as an Admin. Please log in instead."),
+              backgroundColor: AppColors.error,
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Profile exists as Member -> Add Admin Role flow
+      if (!_isAddRoleMode) {
+        setState(() {
+          _isAddRoleMode = true;
+          if (profile['full_name'] != null && profile['full_name'].toString().isNotEmpty) {
+            _fullNameController.text = profile['full_name'].toString();
+          }
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("An account already exists for this mobile. Enter your existing password to add Admin access."),
+              backgroundColor: AppColors.info,
+              duration: Duration(seconds: 6),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
     final res = await ref.read(authStateProvider.notifier).sendOtp(mobile, purpose: 'signup');
 
     if (res['success'] == true && mounted) {
@@ -92,16 +139,32 @@ class _AdminSignUpScreenState extends ConsumerState<AdminSignUpScreen> {
       return;
     }
 
-    final success = await ref.read(authStateProvider.notifier).verifyOtpAndLogin(
-          mobile: _mobileController.text.trim(),
-          otp: _otpController.text.trim(),
-          purpose: 'signup',
-          fullName: _fullNameController.text.trim(),
-          role: 'admin',
-        );
+    final mobile = _mobileController.text.trim();
+    final otp = _otpController.text.trim();
 
-    if (success && mounted) {
-      context.go('/admin-dashboard');
+    if (_isAddRoleMode) {
+      final success = await ref.read(authStateProvider.notifier).addRoleToExistingAccount(
+            mobile: mobile,
+            password: _passwordController.text.trim(),
+            otp: otp,
+            newRole: 'admin',
+          );
+      if (success && mounted) {
+        context.go('/select-role');
+      }
+    } else {
+      final success = await ref.read(authStateProvider.notifier).verifyOtpAndLogin(
+            mobile: mobile,
+            otp: otp,
+            purpose: 'signup',
+            fullName: _fullNameController.text.trim(),
+            password: _passwordController.text.trim(),
+            role: 'admin',
+          );
+
+      if (success && mounted) {
+        context.go('/admin-dashboard');
+      }
     }
   }
 
@@ -111,12 +174,18 @@ class _AdminSignUpScreenState extends ConsumerState<AdminSignUpScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_otpSent ? 'Verify Admin OTP' : 'Admin Registration (OTP)'),
+        title: Text(
+          _otpSent
+              ? 'Verify Admin OTP'
+              : (_isAddRoleMode ? 'Add Admin Role' : 'Admin Registration (OTP)'),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () {
             if (_otpSent) {
               setState(() => _otpSent = false);
+            } else if (_isAddRoleMode) {
+              setState(() => _isAddRoleMode = false);
             } else {
               context.pop();
             }
@@ -149,7 +218,9 @@ class _AdminSignUpScreenState extends ConsumerState<AdminSignUpScreen> {
                 const SizedBox(height: 16),
 
                 Text(
-                  _otpSent ? 'Enter 6-Digit OTP' : 'Create AGBS Admin Account',
+                  _otpSent
+                      ? 'Enter 6-Digit OTP'
+                      : (_isAddRoleMode ? 'Add Admin Access' : 'Create AGBS Admin Account'),
                   textAlign: TextAlign.center,
                   style: GoogleFonts.poppins(
                     fontSize: 24,
@@ -163,7 +234,9 @@ class _AdminSignUpScreenState extends ConsumerState<AdminSignUpScreen> {
                 Text(
                   _otpSent
                       ? 'OTP sent via Brevo SMS to +91 ${_mobileController.text}'
-                      : 'Audichya Gadhiya Brahm Samaj Admin Portal',
+                      : (_isAddRoleMode
+                          ? 'Enter your existing account password to add Admin access to +91 ${_mobileController.text}'
+                          : 'Audichya Gadhiya Brahm Samaj Admin Portal'),
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                     fontSize: 14,
@@ -190,9 +263,9 @@ class _AdminSignUpScreenState extends ConsumerState<AdminSignUpScreen> {
                   ),
 
                 if (!_otpSent) ...[
-                  // Step 1: Admin Registration Form
                   TextFormField(
                     controller: _fullNameController,
+                    enabled: !_isAddRoleMode,
                     textCapitalization: TextCapitalization.words,
                     decoration: const InputDecoration(
                       labelText: 'Full Name *',
@@ -211,6 +284,7 @@ class _AdminSignUpScreenState extends ConsumerState<AdminSignUpScreen> {
 
                   TextFormField(
                     controller: _mobileController,
+                    enabled: !_isAddRoleMode,
                     keyboardType: TextInputType.phone,
                     maxLength: 10,
                     decoration: const InputDecoration(
@@ -234,9 +308,11 @@ class _AdminSignUpScreenState extends ConsumerState<AdminSignUpScreen> {
                     obscureText: _obscurePassword,
                     onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
-                      labelText: 'Password *',
-                      hintText: 'Minimum 8 characters',
-                      helperText: 'Your password must be at least 8 characters with a letter and a number.',
+                      labelText: _isAddRoleMode ? 'Existing Account Password *' : 'Password *',
+                      hintText: _isAddRoleMode ? 'Enter your account password' : 'Minimum 8 characters',
+                      helperText: _isAddRoleMode
+                          ? 'Enter your existing account password to confirm identity'
+                          : 'Your password must be at least 8 characters with a letter and a number.',
                       prefixIcon: const Icon(Icons.lock_outline_rounded),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -253,93 +329,97 @@ class _AdminSignUpScreenState extends ConsumerState<AdminSignUpScreen> {
                       if (val == null || val.isEmpty) {
                         return 'Password is required';
                       }
-                      if (!_hasMinLength(val)) {
-                        return 'Password must be at least 8 characters';
-                      }
-                      if (!_hasLetter(val)) {
-                        return 'Password must contain at least one letter';
-                      }
-                      if (!_hasDigit(val)) {
-                        return 'Password must contain at least one number';
+                      if (!_isAddRoleMode) {
+                        if (!_hasMinLength(val)) {
+                          return 'Password must be at least 8 characters';
+                        }
+                        if (!_hasLetter(val)) {
+                          return 'Password must contain at least one letter';
+                        }
+                        if (!_hasDigit(val)) {
+                          return 'Password must contain at least one number';
+                        }
                       }
                       return null;
                     },
                   ),
 
-                  const SizedBox(height: 16),
+                  if (!_isAddRoleMode) ...[
+                    const SizedBox(height: 16),
 
-                  TextFormField(
-                    controller: _confirmPasswordController,
-                    obscureText: _obscureConfirmPassword,
-                    onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(
-                      labelText: 'Retype Password *',
-                      hintText: 'Retype your password',
-                      prefixIcon: const Icon(Icons.lock_reset_rounded),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                    TextFormField(
+                      controller: _confirmPasswordController,
+                      obscureText: _obscureConfirmPassword,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        labelText: 'Retype Password *',
+                        hintText: 'Retype your password',
+                        prefixIcon: const Icon(Icons.lock_reset_rounded),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscureConfirmPassword = !_obscureConfirmPassword;
+                            });
+                          },
                         ),
-                        onPressed: () {
-                          setState(() {
-                            _obscureConfirmPassword = !_obscureConfirmPassword;
-                          });
-                        },
+                      ),
+                      validator: (val) {
+                        if (val == null || val.isEmpty) {
+                          return 'Please retype your password';
+                        }
+                        if (val != _passwordController.text) {
+                          return 'Passwords do not match';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Password Requirements Card
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Password Requirements:',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          _buildRuleItem(
+                            'At least 8 characters long',
+                            _hasMinLength(_passwordController.text),
+                          ),
+                          _buildRuleItem(
+                            'Contains at least one letter (A-Z, a-z)',
+                            _hasLetter(_passwordController.text),
+                          ),
+                          _buildRuleItem(
+                            'Contains at least one number (0-9)',
+                            _hasDigit(_passwordController.text),
+                          ),
+                          _buildRuleItem(
+                            'Both fields must match',
+                            _passwordController.text.isNotEmpty &&
+                                _passwordController.text == _confirmPasswordController.text,
+                          ),
+                        ],
                       ),
                     ),
-                    validator: (val) {
-                      if (val == null || val.isEmpty) {
-                        return 'Please retype your password';
-                      }
-                      if (val != _passwordController.text) {
-                        return 'Passwords do not match';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Password Requirements Card
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Password Requirements:',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        _buildRuleItem(
-                          'At least 8 characters long',
-                          _hasMinLength(_passwordController.text),
-                        ),
-                        _buildRuleItem(
-                          'Contains at least one letter (A-Z, a-z)',
-                          _hasLetter(_passwordController.text),
-                        ),
-                        _buildRuleItem(
-                          'Contains at least one number (0-9)',
-                          _hasDigit(_passwordController.text),
-                        ),
-                        _buildRuleItem(
-                          'Both fields must match',
-                          _passwordController.text.isNotEmpty &&
-                              _passwordController.text == _confirmPasswordController.text,
-                        ),
-                      ],
-                    ),
-                  ),
+                  ],
 
                   const SizedBox(height: 28),
 
@@ -357,7 +437,9 @@ class _AdminSignUpScreenState extends ConsumerState<AdminSignUpScreen> {
                               strokeWidth: 2.5,
                             ),
                           )
-                        : const Text('Send SMS OTP for Registration'),
+                        : Text(_isAddRoleMode
+                            ? 'Verify Password & Send SMS OTP'
+                            : 'Send SMS OTP for Registration'),
                   ),
                 ] else ...[
                   // Step 2: OTP Verification Screen
@@ -395,7 +477,9 @@ class _AdminSignUpScreenState extends ConsumerState<AdminSignUpScreen> {
                               strokeWidth: 2.5,
                             ),
                           )
-                        : const Text('Verify OTP & Complete Admin Registration'),
+                        : Text(_isAddRoleMode
+                            ? 'Verify OTP & Add Admin Role'
+                            : 'Verify OTP & Complete Admin Registration'),
                   ),
 
                   const SizedBox(height: 20),

@@ -93,6 +93,7 @@ class AuthRepository {
           'id': response.user!.id,
           'mobile_number': mobile.trim(),
           'role': role,
+          'roles': [role],
           'full_name': fullName.trim(),
         });
       }
@@ -114,6 +115,7 @@ class AuthRepository {
             'id': signUpRes.user!.id,
             'mobile_number': mobile.trim(),
             'role': role,
+            'roles': [role],
             'full_name': fullName ?? (role == 'admin' ? 'Admin' : 'Member'),
           });
         }
@@ -212,6 +214,78 @@ class AuthRepository {
     } catch (e) {
       return null;
     }
+  }
+
+  /// Fetch profile by mobile number
+  Future<Map<String, dynamic>?> getProfileByMobile(String mobile) async {
+    try {
+      final res = await _client
+          .from('profiles')
+          .select()
+          .eq('mobile_number', mobile.trim())
+          .maybeSingle();
+      return res;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Add a new role to an existing mobile account
+  Future<bool> addRoleToExistingAccount({
+    required String mobile,
+    required String password,
+    required String otp,
+    required String newRole,
+  }) async {
+    // 1. Verify OTP
+    final otpRes = await _client.functions.invoke(
+      'verify-otp',
+      body: {
+        'mobile_number': mobile.trim(),
+        'otp': otp.trim(),
+        'purpose': 'signup',
+      },
+    );
+
+    if (otpRes.status != 200 || otpRes.data == null || otpRes.data['success'] != true) {
+      final errMsg = otpRes.data?['error'] ?? 'Incorrect or expired OTP. Please try again.';
+      throw AuthException(errMsg.toString());
+    }
+
+    // 2. Validate existing password by signing in
+    final email = _mobileToEmail(mobile);
+    final authRes = await _client.auth.signInWithPassword(
+      email: email,
+      password: password.trim(),
+    );
+
+    if (authRes.user == null) {
+      throw const AuthException('Invalid existing account password.');
+    }
+
+    // 3. Fetch existing profile and update roles array
+    final existingProfile = await getUserProfile(authRes.user!.id);
+    List<String> currentRoles = [];
+    if (existingProfile != null) {
+      if (existingProfile['roles'] != null && existingProfile['roles'] is List) {
+        currentRoles = List<String>.from(existingProfile['roles']);
+      } else if (existingProfile['role'] != null) {
+        currentRoles = [existingProfile['role'].toString()];
+      }
+    }
+
+    if (!currentRoles.contains(newRole)) {
+      currentRoles.add(newRole);
+    }
+
+    await _client.from('profiles').upsert({
+      'id': authRes.user!.id,
+      'mobile_number': mobile.trim(),
+      'role': newRole,
+      'roles': currentRoles,
+    });
+
+    return true;
   }
 
   Future<void> signOut() async {

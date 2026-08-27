@@ -34,7 +34,21 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
         );
 
     if (success && mounted) {
-      context.go('/admin-dashboard');
+      final profile = ref.read(authStateProvider).profile;
+      List<String> roles = [];
+      if (profile != null) {
+        if (profile['roles'] != null && profile['roles'] is List) {
+          roles = List<String>.from(profile['roles']);
+        } else if (profile['role'] != null) {
+          roles = [profile['role'].toString()];
+        }
+      }
+
+      if (roles.contains('member') && roles.contains('admin')) {
+        context.go('/select-role');
+      } else {
+        context.go('/admin-dashboard');
+      }
     }
   }
 

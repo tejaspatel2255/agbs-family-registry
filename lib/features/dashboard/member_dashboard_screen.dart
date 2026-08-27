@@ -85,13 +85,31 @@ class _MemberDashboardScreenState extends ConsumerState<MemberDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final familyState = ref.watch(familyStateProvider);
+    final authState = ref.watch(authStateProvider);
+    final profile = authState.profile;
     final displayedFamilies = familyState.filteredFamilies;
+
+    List<String> roles = [];
+    if (profile != null) {
+      if (profile['roles'] != null && profile['roles'] is List) {
+        roles = List<String>.from(profile['roles']);
+      } else if (profile['role'] != null) {
+        roles = [profile['role'].toString()];
+      }
+    }
+    final hasDualRoles = roles.contains('member') && roles.contains('admin');
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Member Dashboard'),
         actions: [
+          if (hasDualRoles)
+            IconButton(
+              icon: const Icon(Icons.swap_horiz_rounded),
+              tooltip: 'Switch Role',
+              onPressed: () => context.go('/select-role'),
+            ),
           IconButton(
             icon: const Icon(Icons.logout_rounded),
             tooltip: 'Logout',

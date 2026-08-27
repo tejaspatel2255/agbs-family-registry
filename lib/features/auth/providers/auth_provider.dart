@@ -163,9 +163,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final response = await _repository.signInAdmin(emailOrMobile: emailOrMobile, password: password);
       if (response.user != null) {
         final profile = await _repository.getUserProfile(response.user!.id);
-        final role = profile?['role'] ?? 'member';
+        
+        List<String> roles = [];
+        if (profile != null) {
+          if (profile['roles'] != null && profile['roles'] is List) {
+            roles = List<String>.from(profile['roles']);
+          } else if (profile['role'] != null) {
+            roles = [profile['role'].toString()];
+          }
+        }
 
-        if (role != 'admin') {
+        if (!roles.contains('admin')) {
           await _repository.signOut();
           state = state.copyWith(
             isLoading: false,
@@ -178,6 +186,47 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return true;
       }
       state = state.copyWith(isLoading: false, errorMessage: 'Admin login failed');
+      return false;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: e.toString().replaceAll('Exception: ', '').replaceAll('AuthException: ', ''),
+      );
+      return false;
+    }
+  }
+
+  /// Check profile by mobile number
+  Future<Map<String, dynamic>?> getProfileByMobile(String mobile) async {
+    return await _repository.getProfileByMobile(mobile);
+  }
+
+  /// Add a new role to an existing account
+  Future<bool> addRoleToExistingAccount({
+    required String mobile,
+    required String password,
+    required String otp,
+    required String newRole,
+  }) async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
+    try {
+      final success = await _repository.addRoleToExistingAccount(
+        mobile: mobile,
+        password: password,
+        otp: otp,
+        newRole: newRole,
+      );
+      if (success) {
+        final user = _repository.currentUser;
+        if (user != null) {
+          final profile = await _repository.getUserProfile(user.id);
+          state = state.copyWith(isLoading: false, profile: profile);
+        } else {
+          state = state.copyWith(isLoading: false);
+        }
+        return true;
+      }
+      state = state.copyWith(isLoading: false, errorMessage: 'Failed to add role');
       return false;
     } catch (e) {
       state = state.copyWith(
