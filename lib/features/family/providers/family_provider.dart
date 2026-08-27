@@ -56,6 +56,9 @@ class FamilyNotifier extends StateNotifier<FamilyState> {
   Future<void> loadFamilies() async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
+      final authState = _ref.read(authStateProvider);
+      final currentUser = _ref.read(currentUserProvider);
+
       bool isAdmin = false;
       final profile = authState.profile;
       if (profile != null) {
