@@ -37,7 +37,19 @@ class AuthState {
 class AuthNotifier extends StateNotifier<AuthState> {
   final AuthRepository _repository;
 
-  AuthNotifier(this._repository) : super(AuthState());
+  AuthNotifier(this._repository) : super(AuthState()) {
+    loadUserProfile();
+  }
+
+  Future<void> loadUserProfile() async {
+    final user = _repository.currentUser;
+    if (user != null) {
+      final profile = await _repository.getUserProfile(user.id);
+      if (profile != null) {
+        state = state.copyWith(profile: profile);
+      }
+    }
+  }
 
   /// Standard Member Login
   Future<bool> loginMember(String mobile, String password) async {
