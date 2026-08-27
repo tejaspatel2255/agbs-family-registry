@@ -2,19 +2,26 @@
 
 **Audichya Gadhiya Brahm Samaj (AGBS), Junagadh**
 
-A modern, cross-platform Flutter application integrated with Supabase for managing community family records, member directories, profile photo management, SMS OTP authentication, and administrative controls.
+A modern, production-grade cross-platform Flutter application integrated with Supabase for managing community family records, member directories, profile photo management, SMS OTP authentication, PDF directory printing, and administrative read-only controls.
 
 ---
 
 ## 🎨 Design & Features
 
-- **Branding**: Dark Green (`#0F6E51`), Google Fonts (Poppins & Inter), Material 3 styling.
+- **Branding**: Dark Green (`#0F6E51`), Google Fonts (Poppins & Inter), Material 3 styling, customized app launcher icons.
 - **Authentication**:
-  - **Admin Login**: Secure password authentication for administrators.
-  - **Member Authentication**: SMS OTP registration & login via Brevo SMS.
-  - **Member Password Reset**: 3-step OTP password reset flow with 10-minute single-use tokens & real-time password strength validation.
+  - **Admin Login**: Password-based authentication for administrators.
+  - **Member Authentication**: SMS OTP registration & login via Brevo SMS API.
+  - **Member Password Reset**: 3-step OTP password reset flow with single-use tokens & real-time password validation.
+- **Family Directory & Admin Read-Only Mode**:
+  - **Admin Access**: View-only access to all community family entries without edit/delete privileges.
+  - **Interactive Family Modal**: Popup bottom sheet displaying Head of Family (HOF) details and a structured sub-list of family members.
+  - **Registered Mobile Number**: HOF registered mobile numbers linked across user profiles.
+- **PDF Directory Export & Printing**:
+  - Export entire community directory into formatted PDF cards with Poppins Unicode font support.
+  - Formatted HOF cards with member sub-tables.
 - **Family Record Management**:
-  - Full CRUD capabilities for family heads and members.
+  - Full CRUD capabilities for family heads and dependent members.
   - Photo upload support with automatic caching.
   - Search by Name, Family ID, or Address.
   - Row Level Security (RLS) ensuring privacy and access control.
@@ -23,9 +30,10 @@ A modern, cross-platform Flutter application integrated with Supabase for managi
 
 ## 🛠️ Technology Stack
 
-- **Frontend**: Flutter (Web, Android, iOS, Windows, macOS)
+- **Frontend**: Flutter Web & Mobile (`com.agbsjunagadh.familyregistry`)
 - **State Management**: Flutter Riverpod (`flutter_riverpod`)
 - **Routing**: `go_router`
+- **PDF & Printing**: `pdf` & `printing` with Google Fonts (`poppins`)
 - **Backend & DB**: Supabase (PostgreSQL, Auth, RLS, Storage)
 - **Edge Functions**: Deno TypeScript (`send-otp`, `verify-otp`, `reset-password`)
 - **SMS Gateway**: Brevo SMS API
@@ -34,26 +42,19 @@ A modern, cross-platform Flutter application integrated with Supabase for managi
 
 ## 🔒 Security & Environment Setup
 
-Sensitive environment credentials (such as Supabase Anon Keys and API URLs) are kept out of Git via `.gitignore`.
+Environment variables can be provided via `--dart-define` at build time or fallback constants in `lib/core/constants/supabase_constants.dart`.
 
-### Initial Setup:
-1. Copy `supabase_constants.template.dart` to create your local `supabase_constants.dart`:
-   ```bash
-   cp lib/core/constants/supabase_constants.template.dart lib/core/constants/supabase_constants.dart
-   ```
-2. Open `lib/core/constants/supabase_constants.dart` and paste your Supabase Project URL and Anon Key:
-   ```dart
-   class SupabaseConstants {
-     static const String supabaseUrl = 'YOUR_SUPABASE_PROJECT_URL';
-     static const String supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
-   }
-   ```
+```bash
+flutter build apk --release \
+  --dart-define=SUPABASE_URL=https://hppmrifkxxlbytvkowdu.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+```
 
 ---
 
 ## ⚡ Supabase Edge Functions Deployment
 
-Deploy all 3 backend Edge Functions to your Supabase project:
+Deploy backend Edge Functions to your Supabase project:
 
 ```bash
 # 1. Deploy send-otp (Handles SMS dispatching via Brevo)
@@ -64,10 +65,8 @@ npx supabase functions deploy verify-otp
 
 # 3. Deploy reset-password (Handles secure password updates)
 npx supabase functions deploy reset-password
-```
 
-Set required environment variables in Supabase Dashboard (or via CLI):
-```bash
+# Set Brevo API Key secret
 npx supabase secrets set BREVO_API_KEY="your_brevo_api_key"
 ```
 
@@ -75,24 +74,20 @@ npx supabase secrets set BREVO_API_KEY="your_brevo_api_key"
 
 ## 🚀 Building & Releasing the App
 
-### 1. Web Release Build
+### 1. Android Release APK
 ```bash
-flutter build web --release
-```
-*Outputs to `build/web/` — ready to host on Vercel, Netlify, Firebase, or any web server.*
-
-### 2. Android Release Builds
-```bash
-# Direct APK (for testing or direct sharing)
 flutter build apk --release
+```
+*Outputs to `build/app/outputs/flutter-apk/app-release.apk` — ready for direct sharing and installation.*
 
-# Android App Bundle (for Google Play Store upload)
+### 2. Android App Bundle (Google Play Store)
+```bash
 flutter build appbundle --release
 ```
 
-### 3. Windows Desktop Build
+### 3. Web Release Build
 ```bash
-flutter build windows --release
+flutter build web --release
 ```
 
 ---

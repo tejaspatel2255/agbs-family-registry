@@ -18,7 +18,6 @@ migrate_working_dir/
 *.env.*
 *.pem
 *.key
-lib/core/constants/supabase_constants.dart
 supabase/.temp/
 supabase/.env*
 supabase/functions/*/.env
