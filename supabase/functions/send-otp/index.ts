@@ -39,11 +39,11 @@ serve(async (req) => {
     const validPurpose = ["signup", "login", "reset_password"].includes(purpose) ? purpose : "signup";
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // 1b. If purpose is reset_password, verify that a Member profile exists for this mobile number
+    // 1b. If purpose is reset_password, verify that a profile exists for this mobile number
     if (validPurpose === "reset_password") {
       const { data: profile, error: profErr } = await supabase
         .from("profiles")
-        .select("role")
+        .select("id")
         .eq("mobile_number", mobileClean)
         .maybeSingle();
 
