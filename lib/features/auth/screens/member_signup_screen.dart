@@ -150,6 +150,13 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
             newRole: 'member',
           );
       if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Member access added to your account!"),
+            backgroundColor: AppColors.success,
+            duration: Duration(seconds: 4),
+          ),
+        );
         context.go('/select-role');
       }
     } else {

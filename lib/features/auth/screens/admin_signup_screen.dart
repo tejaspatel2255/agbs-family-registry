@@ -150,6 +150,13 @@ class _AdminSignUpScreenState extends ConsumerState<AdminSignUpScreen> {
             newRole: 'admin',
           );
       if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Admin access added to your account!"),
+            backgroundColor: AppColors.success,
+            duration: Duration(seconds: 4),
+          ),
+        );
         context.go('/select-role');
       }
     } else {
