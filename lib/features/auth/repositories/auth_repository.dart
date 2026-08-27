@@ -189,20 +189,9 @@ class AuthRepository {
     final input = emailOrMobile.trim();
     String email = input;
 
-    // If input is 10-digit mobile number, check profiles for corresponding email/user
-    if (RegExp(r'^[6-9]\d{9}$').hasMatch(input)) {
-      final profile = await _client
-          .from('profiles')
-          .select('id')
-          .eq('mobile_number', input)
-          .maybeSingle();
-
-      if (profile != null) {
-        final userRes = await _client.auth.admin.getUserById(profile['id']);
-        if (userRes.user?.email != null) {
-          email = userRes.user!.email!;
-        }
-      }
+    // If input is 10-digit mobile number, map to synthetic email
+    if (RegExp(r'^[0-9]{10}$').hasMatch(input)) {
+      email = _mobileToEmail(input);
     }
 
     return await _client.auth.signInWithPassword(
