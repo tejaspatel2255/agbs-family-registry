@@ -165,8 +165,10 @@ class _MemberForgotPasswordScreenState extends ConsumerState<MemberForgotPasswor
           onPressed: () {
             if (_currentStep > 1) {
               setState(() => _currentStep--);
-            } else {
+            } else if (context.canPop()) {
               context.pop();
+            } else {
+              context.go(widget.returnRoute);
             }
           },
         ),

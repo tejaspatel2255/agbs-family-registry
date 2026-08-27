@@ -193,8 +193,10 @@ class _MemberSignUpScreenState extends ConsumerState<MemberSignUpScreen> {
               setState(() => _otpSent = false);
             } else if (_isAddRoleMode) {
               setState(() => _isAddRoleMode = false);
-            } else {
+            } else if (context.canPop()) {
               context.pop();
+            } else {
+              context.go('/welcome');
             }
           },
         ),

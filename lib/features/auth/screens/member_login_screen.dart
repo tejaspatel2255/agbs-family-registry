@@ -61,7 +61,13 @@ class _MemberLoginScreenState extends ConsumerState<MemberLoginScreen> {
         title: const Text('Member Login'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/welcome');
+            }
+          },
         ),
       ),
       body: SafeArea(
