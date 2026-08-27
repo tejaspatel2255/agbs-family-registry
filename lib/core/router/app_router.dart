@@ -45,7 +45,10 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/member-forgot-password',
-      builder: (context, state) => const MemberForgotPasswordScreen(),
+      builder: (context, state) {
+        final returnRoute = state.uri.queryParameters['returnRoute'] ?? '/member-login';
+        return MemberForgotPasswordScreen(returnRoute: returnRoute);
+      },
     ),
     GoRoute(
       path: '/admin-dashboard',

@@ -179,7 +179,26 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                     },
                   ),
 
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 8),
+
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        context.push('/member-forgot-password?returnRoute=/admin-login');
+                      },
+                      child: Text(
+                        'Forgot Password?',
+                        style: GoogleFonts.inter(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
 
                   ElevatedButton(
                     onPressed: authState.isLoading ? null : _handleAdminLogin,

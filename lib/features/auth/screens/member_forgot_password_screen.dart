@@ -7,7 +7,8 @@ import '../../../core/theme/app_colors.dart';
 import '../providers/auth_provider.dart';
 
 class MemberForgotPasswordScreen extends ConsumerStatefulWidget {
-  const MemberForgotPasswordScreen({super.key});
+  final String returnRoute;
+  const MemberForgotPasswordScreen({super.key, this.returnRoute = '/member-login'});
 
   @override
   ConsumerState<MemberForgotPasswordScreen> createState() => _MemberForgotPasswordScreenState();
@@ -122,7 +123,7 @@ class _MemberForgotPasswordScreenState extends ConsumerState<MemberForgotPasswor
           duration: Duration(seconds: 4),
         ),
       );
-      context.go('/member-login');
+      context.go(widget.returnRoute);
     }
   }
 
