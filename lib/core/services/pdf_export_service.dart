@@ -16,7 +16,7 @@ class PdfExportService {
           return pw.Column(
             children: [
               pw.Row(
-                main: pw.MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text(
                     'Audichya Gadhiya Brahm Samaj (AGBS)',

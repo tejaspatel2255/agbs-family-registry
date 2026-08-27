@@ -6,6 +6,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/app_colors.dart';
 import '../auth/providers/auth_provider.dart';
 import '../family/providers/family_provider.dart';
+import '../family/models/family_model.dart';
+import '../members/models/family_member_model.dart';
 
 class MemberDashboardScreen extends ConsumerStatefulWidget {
   const MemberDashboardScreen({super.key});
