@@ -168,6 +168,8 @@ class _MemberDashboardScreenState extends ConsumerState<MemberDashboardScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              if (family.mobileNumber != null && family.mobileNumber!.isNotEmpty)
+                                _buildDetailRow('Registered Mobile:', family.mobileNumber!),
                               _buildDetailRow('Father / Husband:', family.fatherHusbandName),
                               _buildDetailRow('Mother Name:', family.motherName),
                               _buildDetailRow('Gender:', family.gender),

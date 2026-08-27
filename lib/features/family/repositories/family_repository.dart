@@ -9,7 +9,7 @@ class FamilyRepository {
   /// Fetch families with role check (Admin gets all, Member gets own)
   Future<List<FamilyModel>> fetchFamilies({required bool isAdmin, required String? userId}) async {
     try {
-      var query = _client.from('families').select('*');
+      var query = _client.from('families').select('*, profiles:created_by(mobile_number)');
       
       if (!isAdmin && userId != null) {
         query = query.eq('created_by', userId);

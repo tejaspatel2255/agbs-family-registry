@@ -25,6 +25,17 @@ class PdfExportService {
       // Fallback if network or table query fails
     }
 
+    // Fetch all profiles to map HOF mobile numbers by profile id
+    final Map<String, String> profileMobileById = {};
+    try {
+      final profilesResponse = await SupabaseService.client.from('profiles').select('id, mobile_number');
+      for (final p in profilesResponse as List) {
+        if (p['id'] != null && p['mobile_number'] != null) {
+          profileMobileById[p['id'].toString()] = p['mobile_number'].toString();
+        }
+      }
+    } catch (_) {}
+
     final pdf = pw.Document(
       theme: pw.ThemeData.withFont(
         base: fontRegular,
@@ -110,6 +121,7 @@ class PdfExportService {
           for (int i = 0; i < families.length; i++) {
             final f = families[i];
             final members = membersByFamilyId[f.id] ?? [];
+            final mobileNum = f.mobileNumber ?? (f.createdBy != null ? profileMobileById[f.createdBy!] : null) ?? 'N/A';
 
             widgets.add(
               pw.Container(
@@ -161,6 +173,7 @@ class PdfExportService {
                           child: pw.Column(
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
                             children: [
+                              _buildPdfTextRow('Registered Mobile:', mobileNum),
                               _buildPdfTextRow('Father / Husband:', f.fatherHusbandName),
                               _buildPdfTextRow('Mother Name:', f.motherName),
                               _buildPdfTextRow('Marital Status:', f.maritalStatus),
