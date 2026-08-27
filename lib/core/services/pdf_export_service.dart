@@ -11,6 +11,14 @@ class PdfExportService {
     final fontRegular = await PdfGoogleFonts.poppinsRegular();
     final fontBold = await PdfGoogleFonts.poppinsBold();
 
+    List<FamilyModel> familyList = List.from(families);
+    if (familyList.isEmpty) {
+      try {
+        final response = await SupabaseService.client.from('families').select('*, profiles:created_by(mobile_number)').order('created_at', ascending: false);
+        familyList = (response as List).map((e) => FamilyModel.fromJson(e)).toList();
+      } catch (_) {}
+    }
+
     // Fetch all family members across all families from database
     final Map<String, List<FamilyMemberModel>> membersByFamilyId = {};
     try {
@@ -86,7 +94,7 @@ class PdfExportService {
           );
         },
         build: (pw.Context context) {
-          if (families.isEmpty) {
+          if (familyList.isEmpty) {
             return [
               pw.Center(
                 child: pw.Padding(
@@ -106,7 +114,7 @@ class PdfExportService {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text(
-                  'Total Families Registered: ${families.length}',
+                  'Total Families Registered: ${familyList.length}',
                   style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800),
                 ),
                 pw.Text(
@@ -118,8 +126,8 @@ class PdfExportService {
           );
           widgets.add(pw.SizedBox(height: 12));
 
-          for (int i = 0; i < families.length; i++) {
-            final f = families[i];
+          for (int i = 0; i < familyList.length; i++) {
+            final f = familyList[i];
             final members = membersByFamilyId[f.id] ?? [];
             final mobileNum = f.mobileNumber ?? (f.createdBy != null ? profileMobileById[f.createdBy!] : null) ?? 'N/A';
 
