@@ -136,7 +136,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       title: const Text('All Family Registrations'),
                       subtitle: const Text('View, edit, or search community families'),
                       trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () => context.push('/member-dashboard'),
+                      onTap: () => context.push('/member-dashboard?readOnly=true'),
                     ),
                     const Divider(),
                     ListTile(
