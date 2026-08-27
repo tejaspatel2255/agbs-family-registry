@@ -29,6 +29,8 @@ supabase/functions/*/.env
 *.ipr
 *.iws
 .idea/
+.kotlin/
+android/.kotlin/
 
 # VS Code
 .vscode/
