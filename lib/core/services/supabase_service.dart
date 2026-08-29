@@ -6,8 +6,10 @@ class SupabaseService {
   SupabaseService._();
 
   static Future<void> initialize() async {
-    if (SupabaseConstants.supabaseUrl == 'YOUR_SUPABASE_URL') {
-      // Demo initialization or warning log when keys are placeholders
+    if (SupabaseConstants.supabaseUrl.isEmpty || 
+        SupabaseConstants.supabaseUrl == 'YOUR_SUPABASE_URL' ||
+        SupabaseConstants.supabaseUrl.startsWith('YOUR_')) {
+      debugPrint('Supabase initialization skipped: placeholder or empty keys.');
       return;
     }
     try {
@@ -16,7 +18,7 @@ class SupabaseService {
         anonKey: SupabaseConstants.supabaseAnonKey,
       );
     } catch (e, stack) {
-      debugPrint('Supabase initialization failed: $e\n$stack');
+      debugPrint('Supabase initialization warning: $e\n$stack');
     }
   }
 
