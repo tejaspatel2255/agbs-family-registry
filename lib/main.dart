@@ -7,8 +7,24 @@ import 'core/router/app_router.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Catch synchronous Flutter framework errors
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint('Flutter framework error: ${details.exception}');
+  };
+
+  // Catch asynchronous errors in the platform dispatcher
+  WidgetsBinding.instance.platformDispatcher.onError = (Object error, StackTrace stack) {
+    debugPrint('Unhandled platform error: $error\n$stack');
+    return true;
+  };
+
   // Initialize Supabase backend
-  await SupabaseService.initialize();
+  try {
+    await SupabaseService.initialize();
+  } catch (e, stack) {
+    debugPrint('Error during SupabaseService.initialize: $e\n$stack');
+  }
 
   runApp(
     const ProviderScope(
