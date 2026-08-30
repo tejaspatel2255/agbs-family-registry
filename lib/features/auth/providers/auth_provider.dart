@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/services/supabase_service.dart';
 import '../repositories/auth_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
@@ -7,6 +8,7 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 });
 
 final currentUserProvider = Provider<User?>((ref) {
+  if (!SupabaseService.isInitialized) return null;
   return ref.watch(authRepositoryProvider).currentUser;
 });
 
@@ -38,16 +40,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final AuthRepository _repository;
 
   AuthNotifier(this._repository) : super(AuthState()) {
-    loadUserProfile();
+    // Only load profile if Supabase is fully initialized
+    if (SupabaseService.isInitialized) {
+      loadUserProfile();
+    }
   }
 
   Future<void> loadUserProfile() async {
-    final user = _repository.currentUser;
-    if (user != null) {
-      final profile = await _repository.getUserProfile(user.id);
-      if (profile != null) {
-        state = state.copyWith(profile: profile);
+    if (!SupabaseService.isInitialized) return;
+    try {
+      final user = _repository.currentUser;
+      if (user != null) {
+        final profile = await _repository.getUserProfile(user.id);
+        if (profile != null && mounted) {
+          state = state.copyWith(profile: profile);
+        }
       }
+    } catch (e) {
+      // Non-fatal: app continues without profile loaded
     }
   }
 

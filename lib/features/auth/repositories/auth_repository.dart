@@ -2,7 +2,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/supabase_service.dart';
 
 class AuthRepository {
-  SupabaseClient get _client => SupabaseService.client;
+  SupabaseClient get _client {
+    if (!SupabaseService.isInitialized) {
+      throw Exception('Supabase is not yet initialized. Please try again.');
+    }
+    return SupabaseService.client;
+  }
 
   String _mobileToEmail(String mobile) => '${mobile.trim()}@gmail.com';
 

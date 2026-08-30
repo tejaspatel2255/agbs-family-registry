@@ -4,7 +4,12 @@ import '../models/family_model.dart';
 import '../../members/models/family_member_model.dart';
 
 class FamilyRepository {
-  SupabaseClient get _client => SupabaseService.client;
+  SupabaseClient get _client {
+    if (!SupabaseService.isInitialized) {
+      throw Exception('Supabase is not yet initialized. Please try again.');
+    }
+    return SupabaseService.client;
+  }
 
   /// Fetch families with role check (Admin gets all, Member gets own)
   Future<List<FamilyModel>> fetchFamilies({required bool isAdmin, required String? userId}) async {
