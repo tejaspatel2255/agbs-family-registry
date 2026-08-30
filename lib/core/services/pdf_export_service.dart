@@ -12,7 +12,7 @@ class PdfExportService {
     final fontBold = await PdfGoogleFonts.poppinsBold();
 
     List<FamilyModel> familyList = List.from(families);
-    if (familyList.isEmpty) {
+    if (familyList.isEmpty && SupabaseService.isInitialized) {
       try {
         final response = await SupabaseService.client.from('families').select('*, profiles:created_by(mobile_number)').order('created_at', ascending: false);
         familyList = (response as List).map((e) => FamilyModel.fromJson(e)).toList();
@@ -21,28 +21,32 @@ class PdfExportService {
 
     // Fetch all family members across all families from database
     final Map<String, List<FamilyMemberModel>> membersByFamilyId = {};
-    try {
-      final response = await SupabaseService.client.from('family_members').select('*');
-      for (final item in response as List) {
-        final member = FamilyMemberModel.fromJson(item);
-        if (member.familyId != null && member.familyId!.isNotEmpty) {
-          membersByFamilyId.putIfAbsent(member.familyId!, () => []).add(member);
+    if (SupabaseService.isInitialized) {
+      try {
+        final response = await SupabaseService.client.from('family_members').select('*');
+        for (final item in response as List) {
+          final member = FamilyMemberModel.fromJson(item);
+          if (member.familyId != null && member.familyId!.isNotEmpty) {
+            membersByFamilyId.putIfAbsent(member.familyId!, () => []).add(member);
+          }
         }
+      } catch (_) {
+        // Fallback if network or table query fails
       }
-    } catch (_) {
-      // Fallback if network or table query fails
     }
 
     // Fetch all profiles to map HOF mobile numbers by profile id
     final Map<String, String> profileMobileById = {};
-    try {
-      final profilesResponse = await SupabaseService.client.from('profiles').select('id, mobile_number');
-      for (final p in profilesResponse as List) {
-        if (p['id'] != null && p['mobile_number'] != null) {
-          profileMobileById[p['id'].toString()] = p['mobile_number'].toString();
+    if (SupabaseService.isInitialized) {
+      try {
+        final profilesResponse = await SupabaseService.client.from('profiles').select('id, mobile_number');
+        for (final p in profilesResponse as List) {
+          if (p['id'] != null && p['mobile_number'] != null) {
+            profileMobileById[p['id'].toString()] = p['mobile_number'].toString();
+          }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
     final pdf = pw.Document(
       theme: pw.ThemeData.withFont(
