@@ -1,18 +1,20 @@
 /// Supabase configuration constants for Audichya Gadhiya Brahm Samaj (AGBS) Family Registry System.
+/// 
+/// ⚠️ DO NOT hardcode real credentials here.
+/// Values are injected at build time via --dart-define flags (see GitHub Actions workflow).
 class SupabaseConstants {
   SupabaseConstants._();
 
-  // Supabase Project URL
+  // Supabase Project URL — injected via: --dart-define=SUPABASE_URL=...
   static const String supabaseUrl = String.fromEnvironment(
     'SUPABASE_URL',
-    defaultValue: 'https://hppmrifkxxlbytvkowdu.supabase.co',
+    defaultValue: '',
   );
 
-  // Supabase Anon / Public Key
+  // Supabase Anon / Public Key — injected via: --dart-define=SUPABASE_ANON_KEY=...
   static const String supabaseAnonKey = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
-    defaultValue:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwcG1yaWZreHhsYnl0dmtvd2R1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2MzYyOTgsImV4cCI6MjEwMzIxMjI5OH0.-rE4MbOcRHfVeZAmz1zLMHwyRjXcoi7sQeZoc0ZkLIM',
+    defaultValue: '',
   );
 
   // Storage Buckets

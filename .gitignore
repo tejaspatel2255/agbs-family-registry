@@ -1,40 +1,35 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+# ============================================================
+# AGBS Family Registry System — .gitignore
+# ============================================================
 
-# Environment & Credentials
+# -----------------------------------------------
+# ⚠️ CREDENTIALS & SECRETS — NEVER COMMIT THESE
+# -----------------------------------------------
 .env
+.env.*
 *.env
 *.env.*
 *.pem
 *.key
+*.secret
+*.secrets
+*.credentials
+google-services.json
+GoogleService-Info.plist
+key.properties
+keystore/
+*.jks
+*.keystore
+
+# Supabase local secrets
 supabase/.temp/
-supabase/.env*
+supabase/.env
+supabase/.env.*
 supabase/functions/*/.env
-*.secret*
 
-# IntelliJ / Android Studio related
-*.iml
-*.ipr
-*.iws
-.idea/
-.kotlin/
-android/.kotlin/
-
-# VS Code
-.vscode/
-
-# Flutter/Dart/Pub related
+# -----------------------------------------------
+# Flutter / Dart / Pub
+# -----------------------------------------------
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
@@ -45,18 +40,66 @@ android/.kotlin/
 /build/
 /coverage/
 
-# Symbolication related
-app.*.symbols
+# -----------------------------------------------
+# Android Build Artifacts
+# -----------------------------------------------
+/android/app/debug/
+/android/app/profile/
+/android/app/release/
+/android/.gradle/
+/android/local.properties
+/android/captures/
 
-# Obfuscation related
-app.*.map.json
+# -----------------------------------------------
+# iOS Build Artifacts
+# -----------------------------------------------
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
 
-# Android build artifacts
-/android/app/debug
-/android/app/profile
-/android/app/release
-
-# Windows/macOS/Linux build artifacts
+# -----------------------------------------------
+# macOS / Windows / Linux Build Artifacts
+# -----------------------------------------------
 /windows/flutter/ephemeral/
 /macos/Flutter/ephemeral/
 /linux/flutter/ephemeral/
+
+# -----------------------------------------------
+# Web Build Artifacts
+# -----------------------------------------------
+/web/flutter_service_worker.js
+
+# -----------------------------------------------
+# IDEs & Editors
+# -----------------------------------------------
+*.iml
+*.ipr
+*.iws
+.idea/
+.kotlin/
+android/.kotlin/
+.vscode/
+*.swp
+.atom/
+
+# -----------------------------------------------
+# OS & Misc
+# -----------------------------------------------
+.DS_Store
+Thumbs.db
+*.class
+*.log
+*.pyc
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# -----------------------------------------------
+# Obfuscation / Symbolication
+# -----------------------------------------------
+app.*.symbols
+app.*.map.json
