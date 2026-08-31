@@ -679,42 +679,6 @@ class _FamilyFormScreenState extends ConsumerState<FamilyFormScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Photo Upload Section
-          Center(
-            child: GestureDetector(
-              onTap: _pickHeadPhoto,
-              child: Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 46,
-                    backgroundColor: AppColors.primaryContainer,
-                    backgroundImage: _selectedPhotoFile != null
-                        ? FileImage(_selectedPhotoFile!)
-                        : (_photoUrl != null && _photoUrl!.isNotEmpty
-                            ? CachedNetworkImageProvider(_photoUrl!)
-                            : null) as ImageProvider?,
-                    child: _selectedPhotoFile == null && (_photoUrl == null || _photoUrl!.isEmpty)
-                        ? const Icon(Icons.add_a_photo_rounded, size: 40, color: AppColors.primary)
-                        : null,
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.edit_rounded, size: 16, color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 24),
 
           // 1. Full Name (Head of Family)
           TextFormField(
