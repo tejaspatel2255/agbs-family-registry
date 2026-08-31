@@ -660,12 +660,16 @@ class _FamilyFormScreenState extends ConsumerState<FamilyFormScreen> {
                 ),
         ),
         const SizedBox(width: 8),
-        Text(
-          title,
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-            color: isActive ? AppColors.primary : AppColors.textSecondary,
+        Flexible(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+              color: isActive ? AppColors.primary : AppColors.textSecondary,
+            ),
           ),
         ),
       ],
@@ -901,23 +905,28 @@ class _FamilyFormScreenState extends ConsumerState<FamilyFormScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Family Members (${_members.length})',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primaryDark,
+            Expanded(
+              child: Text(
+                'Family Members (${_members.length})',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryDark,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
+            const SizedBox(width: 8),
             ElevatedButton.icon(
               onPressed: () => _showAddEditMemberBottomSheet(),
-              icon: const Icon(Icons.add_rounded, size: 18),
+              icon: const Icon(Icons.add_rounded, size: 16),
               label: const Text('Add Member'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                minimumSize: const Size(120, 42),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                minimumSize: const Size(0, 38),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
             ),
           ],
