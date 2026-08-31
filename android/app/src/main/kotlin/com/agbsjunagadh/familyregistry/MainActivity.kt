@@ -1,4 +1,4 @@
-package com.example.family_registry_system
+package com.agbsjunagadh.familyregistry
 
 import io.flutter.embedding.android.FlutterActivity
 
