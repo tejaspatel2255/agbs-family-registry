@@ -10,7 +10,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/storage_service.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../repositories/family_repository.dart';
 import '../providers/family_provider.dart';
 import '../../members/models/family_member_model.dart';
 
@@ -129,15 +128,6 @@ class _FamilyFormScreenState extends ConsumerState<FamilyFormScreen> {
       age--;
     }
     return age < 0 ? 0 : age;
-  }
-
-  Future<void> _pickHeadPhoto() async {
-    final file = await StorageService.pickImage(ImageSource.gallery);
-    if (file != null) {
-      setState(() {
-        _selectedPhotoFile = file;
-      });
-    }
   }
 
   bool get _isUnderMarriageAge {
